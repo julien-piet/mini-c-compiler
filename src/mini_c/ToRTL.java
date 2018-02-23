@@ -138,8 +138,8 @@ public class ToRTL extends EmptyVisitor {
 			case Bdiv:
 				op = Mbinop.Mdiv;
 				break;
-			//case Bor:
-			//case Band:
+			case Bor:
+			case Band:
 			case Bneq:
 				op = Mbinop.Msetne;
 				break;
