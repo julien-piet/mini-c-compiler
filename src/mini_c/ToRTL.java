@@ -21,28 +21,51 @@ public class ToRTL extends EmptyVisitor {
 		return fun;
 	}
 	public Label visitStmt(Stmt s, Label l) {
+        Label ret_save = ret_label;
+
 		ret_label = l;
 		s.accept(this);
-		return ret_label;
+        Label r = ret_label;
+
+        ret_label = ret_save;
+		return r;
 	}
 	public Label visitExpr(Expr e, Register r, Label l) {
+        boolean in_cond_save = in_cond;
+        Label ret_save = ret_label;
+        Register rd_save = rd;
+        
 		in_cond = false;
 		ret_label = l;
 		rd = r;
 		e.accept(this);
-		return ret_label;
+        Label rl = ret_label;
+
+        in_cond = in_cond_save;
+        ret_label = ret_save;
+        rd = rd_save;
+		return rl;
 	}
 	public Label visitCond(Expr e, Register r, Label l) {
+        boolean in_cond_save = in_cond;
+        Label ret_save = ret_label;
+        Register rd_save = rd;
+        
 		in_cond = true;
 		ret_label = l;
 		rd = r;
 		e.accept(this);
-		return ret_label;
+        Label rl = ret_label;
+
+        in_cond = in_cond_save;
+        ret_label = ret_save;
+        rd = rd_save;
+		return rl;
 	}
 	
 	LinkedList<HashMap<String, Register>> locals = new LinkedList<>();
 	
-	public Register getRegsiter(String var) {
+	public Register getRegister(String var) {
 		// Fetch a register by its associated local variable name
 		Register rtn = null;
 		for(HashMap<String, Register> set : locals) {
@@ -53,76 +76,68 @@ public class ToRTL extends EmptyVisitor {
 	}
 
 	@Override
-	public void visit(Structure n) {
-		// Nothing to do
-		
-	}
-
-	@Override
-	public void visit(Field n) {
-		// Nothing to do
-		
-	}
-
-	@Override
-	public void visit(Decl_var n) {
-		// Nothing to do ???
-		
-	}
-
-	@Override
 	public void visit(Econst n) {
 		ret_label = fun.body.add(new Rconst(n.i, rd, ret_label));
 	}
 
 	@Override
 	public void visit(Eaccess_local n) {
-		Register r = getRegsiter(n.i);
-		ret_label = fun.body.add(new Rload(r, 0, rd, ret_label));	
+		Register r = getRegister(n.i);
+        ret_label = fun.body.add(new Rmbinop(Mbinop.Mmov, r, rd, ret_label));
+	}
+
+	@Override
+	public void visit(Eassign_local n) {
+		Register r = getRegister(n.i);
+        ret_label = fun.body.add(new Rmbinop(Mbinop.Mmov, rd, r, ret_label));
+		ret_label = visitExpr(n.e, rd, ret_label);
 	}
 
 	@Override
 	public void visit(Eaccess_field n) {
 		Register r = new Register();
-		ret_label = fun.body.add(new Rload(r, 0, rd, ret_label));
+		ret_label = fun.body.add(new Rload(r, n.f.pos, rd, ret_label));
 		ret_label = visitExpr(n.e, r, ret_label);
 	}
 
 	@Override
-	public void visit(Eassign_local n) {
-		Register r1 = getRegsiter(n.i);
-		Register r2 = new Register();
-		ret_label = fun.body.add(new Rstore(r2, r1, 0, ret_label));
-		ret_label = visitExpr(n.e, r2, ret_label);
-	}
-
-	@Override
 	public void visit(Eassign_field n) {
-		Register r1 = new Register();
-		Register r2 = new Register();
-		ret_label = fun.body.add(new Rstore(r1, r2, 0, ret_label));
-		ret_label = visitExpr(n.e1, r2, ret_label);
-		ret_label = visitExpr(n.e2, r1, ret_label);
+		Register r = new Register();
+		ret_label = fun.body.add(new Rstore(rd, r, n.f.pos, ret_label));
+		ret_label = visitExpr(n.e1, r, ret_label);
+		ret_label = visitExpr(n.e2, rd, ret_label);
 	}
 
 	@Override
 	public void visit(Eunop n) {
 		switch(n.u) {
 			case Unot:
-				ret_label = fun.body.add(new Rmunop(new Msetnei(0), rd, ret_label));
+				ret_label = fun.body.add(new Rmunop(new Msetei(0), rd, ret_label));
+				ret_label = visitExpr(n.e, rd, ret_label);
 				break;
 			case Uneg:
 				Register r = new Register();
 				ret_label = fun.body.add(new Rmbinop(Mbinop.Msub, r, rd, ret_label));
-				ret_label = fun.body.add(new Rconst(0, r, ret_label));
+				ret_label = fun.body.add(new Rconst(0, rd, ret_label));
+				ret_label = visitExpr(n.e, r, ret_label);
 				break;
 		}
-		ret_label = visitExpr(n.e, rd, ret_label);
 
 	}
 
 	@Override
 	public void visit(Ebinop n) {
+		if (n.b == Binop.Band || n.b == Binop.Bor) {
+			Mubranch brtype = (n.b == Binop.Band) ? new Mjnz() : new Mjz();
+				
+			ret_label = fun.body.add(new Rmunop(new Msetnei(0), rd, ret_label));
+			Label le2 = visitExpr(n.e2, rd, ret_label);
+			Label lazychoice = fun.body.add(new Rmubranch(brtype, rd, le2, ret_label));
+			Label le1 = visitExpr(n.e1, rd, lazychoice);
+			ret_label = le1;
+			return;
+		}
+
 		Register r = new Register();
 		Mbinop op;
 		switch(n.b) {
@@ -138,8 +153,6 @@ public class ToRTL extends EmptyVisitor {
 			case Bdiv:
 				op = Mbinop.Mdiv;
 				break;
-			case Bor:
-			case Band:
 			case Bneq:
 				op = Mbinop.Msetne;
 				break;
@@ -163,25 +176,24 @@ public class ToRTL extends EmptyVisitor {
 		}
 		
 		ret_label = fun.body.add(new Rmbinop(op, r, rd, ret_label));
-		ret_label = visitExpr(n.e1, r, ret_label);
-		ret_label = visitExpr(n.e2, rd, ret_label);
+		ret_label = visitExpr(n.e2, r, ret_label);
+		ret_label = visitExpr(n.e1, rd, ret_label);
 	}
 
 	@Override
 	public void visit(Ecall n) {
 		LinkedList<Register> RTLparams = new LinkedList<>();
 		ret_label = fun.body.add(new Rcall(rd, n.i, RTLparams, ret_label));
-		for ( Expr i : n.el) {
+		for (Expr i : n.el) {
 			Register r = new Register();
+			RTLparams.add(r);
 			ret_label = visitExpr(i, r, ret_label);
 		}
-		
 	}
 
 	@Override
 	public void visit(Esizeof n) {
-		// TODO Auto-generated method stub
-		
+		ret_label = fun.body.add(new Rconst(n.s.size, rd, ret_label));
 	}
 
 	@Override
@@ -206,7 +218,7 @@ public class ToRTL extends EmptyVisitor {
 		Label ifl = visitStmt(n.s1, dest);
 		
 		Register condR = new Register();
-		Label choose = fun.body.add(new Rmubranch(new Mjz(), condR, ifl, ell));
+		Label choose = fun.body.add(new Rmubranch(new Mjnz(), condR, ifl, ell));
 		Label cond = visitCond(n.e, condR, choose);
 		
 		ret_label = cond;
@@ -214,28 +226,49 @@ public class ToRTL extends EmptyVisitor {
 
 	@Override
 	public void visit(Swhile n) {
-		Label out = ret_label;
-		Label last_goto = fun.body.add(null);
-		
-		Label in = visitStmt(n.s, last_goto);
+        // out : end of the while
+        // choose : jumping to the while body or the end depending on condition
+        // cond : computation of the condition
+        // in : inside the while
+        // init : entry point, jumping to cond
+        // 
+        // --> init ----------\/
+        //            in --> cond --> choose --> out
+        //            /\--------------- \/
+        //
+
 		Register condR = new Register();
-		Label choose = fun.body.add(new Rmubranch(new Mjz(), condR, in, out));
+
+		Label out = ret_label;
+		Rmubranch br = new Rmubranch(new Mjnz(), condR, null, out);
+		Label choose = fun.body.add(br);
 		Label cond = visitCond(n.e, condR, choose);
+		Label in = visitStmt(n.s, cond);
+        Label init = fun.body.add(new Rgoto(cond));
 		
-		fun.body.graph.put(last_goto, new Rgoto(cond));
-		
-		ret_label = cond;
+        br.l1 = in;
+		ret_label = init;
 	}
 
 	@Override
 	public void visit(Sblock n) {
-		ListIterator<Stmt> it = n.sl.listIterator(n.sl.size());
+        // Add locals 
 		locals.addFirst(new HashMap<String, Register>());
+        for (Decl_var d: n.dl) {
+            Register vr = new Register();
+            locals.getFirst().put(d.name, vr);
+            fun.locals.add(vr);
+        }
+
+        // Treat statements
+		ListIterator<Stmt> it = n.sl.listIterator(n.sl.size());
 		while (it.hasPrevious()) {
 			Stmt s = it.previous();
 			ret_label = visitStmt(s, ret_label);
 		}
-		locals.removeFirst();
+
+        // Remove locals
+        locals.removeFirst();
 	}
 
 	@Override
@@ -251,7 +284,7 @@ public class ToRTL extends EmptyVisitor {
 		fun.exit = new Label();
 		fun.result = new Register();
 		
-		// Ajout des parametres formels
+		// Add formal parameters
 		locals.addFirst(new HashMap<String, Register>());
 		
 		for (Decl_var formal : n.fun_formals) {
@@ -260,10 +293,10 @@ public class ToRTL extends EmptyVisitor {
 			fun.formals.add(form);
 		}
 		
-		// Traitement du corps
+		// Treat function body 
 		fun.entry = visitStmt(n.fun_body, fun.exit);
 		
-		// Retrait des variables locales
+		// Remove parameters
 		locals.removeFirst();
 	}
 

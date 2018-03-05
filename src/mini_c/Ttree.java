@@ -7,6 +7,7 @@ abstract class Typ {
     abstract void accept(Visitor v);
    
     abstract boolean compat(Typ other);
+    abstract int size();
 }
 
 class Tint extends Typ {
@@ -22,6 +23,10 @@ class Tint extends Typ {
    
     boolean compat(Typ other) {
         return other instanceof Tint || other instanceof Ttypenull;
+    }
+
+    int size() {
+        return 8;
     }
 }
 
@@ -45,6 +50,10 @@ class Tstructp extends Typ {
             || other instanceof Ttypenull
             || (other instanceof Tstructp && ((Tstructp)other).s.str_name.equals(this.s.str_name));
     }
+
+    int size() {
+        return 8;
+    }
 }
 
 class Tvoidstar extends Typ {
@@ -62,6 +71,10 @@ class Tvoidstar extends Typ {
     boolean compat(Typ other) {
         return other instanceof Tvoidstar
         	|| other instanceof Tstructp;
+    }
+
+    int size() {
+        return 8;
     }
 }
 
@@ -82,17 +95,31 @@ class Ttypenull extends Typ {
         	|| other instanceof Tint
         	|| other instanceof Tstructp;
     }
+
+    int size() {
+        return 8;
+    }
 }
 
 class Structure {
 	public String str_name;
 	public HashMap<String, Field> fields;
-	// on pourra ajouter plus tard ici la taille totale de la structure
+    public int size;
 
 	Structure(String str_name) {
 		this.str_name = str_name;
 		this.fields = new HashMap<String, Field>();
+        this.size = 0;
 	}
+
+    boolean addField(Field f) {
+        if (this.fields.put(f.name, f) != null) {
+            return false;
+        }
+        f.pos = this.size;
+        this.size += f.type.size();
+        return true;
+    }
 
 	void accept(Visitor v) {
 		v.visit(this);
@@ -100,13 +127,13 @@ class Structure {
 }
 
 class Field {
-	public String field_name;
-	public Typ field_typ;
-	// on pourra ajouter plus tard ici la position du champ dans la structure
+	public String name;
+	public Typ type;
+    public int pos;
 
-	Field(String field_name, Typ field_typ) {
-		this.field_name = field_name;
-		this.field_typ = field_typ;
+	Field(String name, Typ type) {
+		this.name = name;
+		this.type = type;
 	}
 
 	void accept(Visitor v) {
