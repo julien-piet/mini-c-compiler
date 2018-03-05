@@ -9,7 +9,7 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Map;
 
-public class toERTL extends EmptyRTLVisitor {
+public class ToERTL extends EmptyRTLVisitor {
 
 	ERTLfile   file;
 	ERTLfun    fun;
@@ -45,9 +45,9 @@ public class toERTL extends EmptyRTLVisitor {
 			instr = new ERmbinop(o.m, o.r1, o.r2, o.l);
 			return;
 		}
-		Label intermediate = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.rax, o.r2, o.l));
-		intermediate = fun.body.add(new ERmbinop(Mbinop.Mdiv, o.r1, Register.rax, intermediate));
-		instr = new ERmbinop(Mbinop.Mmov, o.r2, Register.rax, intermediate);
+		Label intermediate = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.rax, o.r1, o.l));
+		intermediate = fun.body.add(new ERmbinop(Mbinop.Mdiv, o.r2, Register.rax, intermediate));
+		instr = new ERmbinop(Mbinop.Mmov, o.r1, Register.rax, intermediate);
 	}
 	
 	public void visit(Rmubranch o) {
@@ -151,7 +151,7 @@ public class toERTL extends EmptyRTLVisitor {
 		
 		//Saving callee-saved registers
 		for(Register r : Register.callee_saved) {
-			next_label = fun.body.add(new ERmbinop(Mbinop.Mmov, r, callee_saved.get(r), next_label));
+			next_label = fun.body.add(new ERmbinop(Mbinop.Mmov, callee_saved.get(r), r, next_label));
 		}
 		
 		//Allocation actiavtion table
