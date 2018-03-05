@@ -13,14 +13,7 @@ public class toERTL extends EmptyRTLVisitor {
 
 	ERTLfile   file;
 	ERTLfun    fun;
-	Label 	   next_label;
-	ERTL	 	   instr; //Holds the latest translated instruction
-	
-	Label 	   current_exit; //Holds the current exit label for the function, to enable visitor to change on the go
-	//This function replaces the label by next_label if the old label used to be the exit
-	public Label update_exit(Label input) {
-		return input == current_exit ? next_label: input;
-	}
+	ERTL	   instr; //Holds the latest translated instruction
 	
 	public ERTLfile translate(RTLfile f) {
 		f.accept(this);
@@ -32,44 +25,44 @@ public class toERTL extends EmptyRTLVisitor {
 	}
 	
 	public void visit(Rconst o) {
-		instr = new ERconst(o.i, o.r, update_exit(o.l));
+		instr = new ERconst(o.i, o.r, o.l);
 	}
 	
 	public void visit(Rload o) {
-		instr = new ERload(o.r1, o.i, o.r2, update_exit(o.l));
+		instr = new ERload(o.r1, o.i, o.r2, o.l);
 	}
 	
 	public void visit(Rstore o) {
-		instr = new ERstore(o.r1, o.r2, o.i, update_exit(o.l));
+		instr = new ERstore(o.r1, o.r2, o.i, o.l);
 	}
 	
 	public void visit(Rmunop o) {
-		instr = new ERmunop(o.m, o.r, update_exit(o.l));
+		instr = new ERmunop(o.m, o.r, o.l);
 	}
 	
 	public void visit(Rmbinop o) {
 		if (o.m != Mbinop.Mdiv) {
-			instr = new ERmbinop(o.m, o.r1, o.r2, update_exit(o.l));
+			instr = new ERmbinop(o.m, o.r1, o.r2, o.l);
 			return;
 		}
-		Label intermediate = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.rax, o.r2, update_exit(o.l)));
+		Label intermediate = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.rax, o.r2, o.l));
 		intermediate = fun.body.add(new ERmbinop(Mbinop.Mdiv, o.r1, Register.rax, intermediate));
 		instr = new ERmbinop(Mbinop.Mmov, o.r2, Register.rax, intermediate);
 	}
 	
 	public void visit(Rmubranch o) {
-		instr = new ERmubranch(o.m, o.r, update_exit(o.l1), update_exit(o.l2));
+		instr = new ERmubranch(o.m, o.r, o.l1, o.l2);
 	}
 	
 	public void visit(Rmbbranch o) {
-		instr = new ERmbbranch(o.m, o.r1, o.r2, update_exit(o.l1), update_exit(o.l2));
+		instr = new ERmbbranch(o.m, o.r1, o.r2, o.l1, o.l2);
 	}
 	  
 	public void visit(Rcall o) {
 		// First, we'll determine the number of arguments
 		int nbOfArguments = o.rl.size();
 		
-		Label inter = update_exit(o.l);
+		Label inter = o.l;
 		// Remove the excess stack space
 		if(nbOfArguments > 6) {
 			Register offset = new Register();
@@ -97,10 +90,11 @@ public class toERTL extends EmptyRTLVisitor {
 	}
 	
 	public void visit(Rgoto o) {
-		instr = new ERgoto(update_exit(o.l));
+		instr = new ERgoto(o.l);
 	}
 	
 	public void visit(RTLfun o) {
+		
 		//Set up function
 		int nbOfFormals = o.formals.size();
 		fun = new ERTLfun(o.name, nbOfFormals);
@@ -112,8 +106,10 @@ public class toERTL extends EmptyRTLVisitor {
 		//Creating a hashmap to associate callee-saved registers and another to associate parameters
 		HashMap<Register, Register> callee_saved = new HashMap<>();
 		
+		Label next_label = fun.body.add(new ERreturn());
+		
 		//Removing activation table
-		next_label = fun.body.add(new ERdelete_frame(o.exit));
+		next_label = fun.body.add(new ERdelete_frame(next_label));
 		
 		//Restoring callee-saved registers
 		for(Register r : Register.callee_saved) {
@@ -124,7 +120,8 @@ public class toERTL extends EmptyRTLVisitor {
 		}
 		
 		//Moving result to %rax
-		next_label = fun.body.add(new ERmbinop(Mbinop.Mmov, o.result, Register.rax, next_label));
+		fun.body.graph.put(o.exit, new ERmbinop(Mbinop.Mmov, o.result, Register.rax, next_label));
+		next_label = o.exit;
 		
 		//Translating function into ERTL
 		Iterator<Map.Entry<Label, RTL>> it = o.body.graph.entrySet().iterator();
