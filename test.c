@@ -1,22 +1,16 @@
-// un exemple de fichier mini-C
-// à modifier au fur et à mesure des tests
-//
-// la commande 'make' recompile mini-c (si nécessaire)
-// et le lance sur ce fichier
-
-/*int fact(int n) {
-	if (n == 0) return 0;
-	else return n * fact(n-1);
-}*/
 
 int main() {
-	while(5) {
-		if (2) {
-			return 2;
-		}
-		else {
-			return 4;
-		}
-	}
-	return 5;
+  putchar(100+4);
+  putchar(102-1);
+  putchar(100+2*4);
+  putchar(216/2);
+  putchar(3*37);
+  putchar(0x20);
+  putchar(118 + -(1-2));
+  putchar(100 + 122 / 11);
+  putchar(113 + (1<2));
+  putchar(108 + (2<1));
+  putchar(99 + (2==1+1));
+  putchar(10 + (1==2));
+  return 0;
 }

@@ -7,8 +7,8 @@ public class Main {
 	
 	static boolean parse_only = false;
 	static boolean type_only = false;
-	static boolean interp_rtl = false;
-	static boolean debug = true;
+	static boolean interp_rtl = true;
+	static boolean debug = false;
 	static String file = null;
 	
 	static void usage() {
@@ -17,7 +17,7 @@ public class Main {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		for (String arg: args)
+		for (String arg: args) {
 			if (arg.equals("--parse-only"))
 				parse_only= true;
 			else if (arg.equals("--type-only"))
@@ -31,32 +31,29 @@ public class Main {
 				if (!arg.endsWith(".c")) usage();
 				file = arg;
 			}
-		if (file == null) file = "test.c"; // pour faciliter les tests
+		}
 		
+		if (file == null) {
+			if(!debug) {
+				usage(); return;
+			}
+			file = "test.c";
+		}
+	
         java.io.Reader reader = new java.io.FileReader(file);
         Lexer lexer = new Lexer(reader);
-        System.out.println("parsing...");
         MyParser parser = new MyParser(lexer);
-        try {
-        	Pfile f = (Pfile) parser.parse().value;
-            if (parse_only) System.exit(0);
-            System.out.println("typing...");
-            Typing typer = new Typing();
-            typer.visit(f);
-            File tf = typer.getFile();
-            if (type_only) System.exit(0);
-            System.out.println("rtling...");
-            RTLfile rtl = (new ToRTL()).translate(tf);
-            System.out.println("done.");
-            if (debug) rtl.print();
-            if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
-        } catch (Error e) {
-        	System.out.println("error: " + e.getMessage());
-        	System.exit(1);
-        } catch (Exception e) {
-        	System.out.println("error: " + e.getMessage());
-        	System.exit(1);
-		}
+    	Pfile f = (Pfile) parser.parse().value;
+        if (parse_only) System.exit(0);
+        
+        Typing typer = new Typing();
+        typer.visit(f);
+        File tf = typer.getFile();
+        if (type_only) System.exit(0);
+        
+        RTLfile rtl = (new ToRTL()).translate(tf);
+        if (debug) rtl.print();
+        if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
 	}
 	
 	static void cat(InputStream st) throws IOException {

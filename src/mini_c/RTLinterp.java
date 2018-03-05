@@ -137,6 +137,11 @@ public class RTLinterp implements RTLVisitor {
 
   @Override
   public void visit(Rcall o) {
+	 /*System.out.print(o.s+"(");
+	 for(Register r: o.rl) {
+		 System.out.print(get(r) + ", ");
+	 }
+	 System.out.println(")");*/
     switch (o.s) {
     case "sbrk":
       set(o.r, this.mem.malloc((int)get(o.rl.get(0))));

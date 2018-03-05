@@ -227,7 +227,7 @@ public class Typing implements Pvisitor {
 		}
 		
 		last_expr = new Eaccess_field(e, f);
-		last_expr.typ = f.field_typ;
+		last_expr.typ = f.type;
 	}
 
 	@Override
@@ -325,6 +325,8 @@ public class Typing implements Pvisitor {
         	block.sl.add(s);
         }
         block_stack.removeFirst();
+        
+        last_stmt = block;
 	}
 
 	@Override
@@ -348,7 +350,7 @@ public class Typing implements Pvisitor {
 		
 		for (Pdeclvar v : n.fl) {
 			Typ t = visitType(v.typ);
-			if (s.fields.put(v.id, new Field(v.id, t)) != null) {
+			if (!s.addField(new Field(v.id, t))) {
 				throw new Error("In structure declaration, field \""+v.id+"\" is declared multiple times inside \"struct "+n.s+"\"");
 			}
 		}
@@ -369,36 +371,19 @@ public class Typing implements Pvisitor {
             Typ argType = visitType(arg.typ);
             args.add(new Decl_var(argType, arg.id));
         }
-        
-        // Local variables
-        HashSet<String> local_vars_name = new HashSet<String>();
-        LinkedList<Decl_var> local_vars = new LinkedList<Decl_var>();
-        for (Decl_var arg : args) {
-        	if(!local_vars_name.add(arg.name)) {
-    			throw new Error("In function declaration, multiple declarations for argument \""+arg.name+"\" inside \""+n.s+"\"");
-        	}
-        	local_vars.add(arg);
-        }
-        for (Pdeclvar localVar : n.b.vl) {
-        	if(!local_vars_name.add(localVar.id)) {
-    			throw new Error("In function declaration, multiple declarations for variable \""+localVar.id+"\" inside \""+n.s+"\"");
-        	}
-            Typ localType = visitType(localVar.typ);
-            local_vars.add(new Decl_var(localType, localVar.id));
-        }
-        
-        // Create function and block
-        Sblock block = new Sblock(local_vars, new LinkedList<Stmt>());
-        Decl_fun fun = new Decl_fun(ret_type, n.s, args, block);
-        file.funs.add(fun);
 
-        // Visit block
-        block_stack.addFirst(block);
-        for (Pstmt stmt : n.b.sl) {
-        	Stmt s = visitStmt(stmt);
-        	block.sl.add(s);
-        }
+		// Declare function for recursive calls
+        Decl_fun fun = new Decl_fun(ret_type, n.s, args, null);
+        file.funs.add(fun);
+        
+        // Create a virtual block containing formals as locals, used to check formal accesses and types
+        Sblock virtualFormalsBlock = new Sblock(args, null);
+        block_stack.addFirst(virtualFormalsBlock);
+        visit(n.b);
         block_stack.removeFirst();
+        
+        // Finally define the function body
+        fun.fun_body = last_stmt;
 	}
 
 }
