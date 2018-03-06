@@ -126,7 +126,7 @@ public class ToLTL implements ERTLVisitor {
 		
 		Liveness live = new Liveness(o.body);
 		Interference inter = new Interference(live);
-		Coloring col = new Coloring(inter);
+		Coloring col = new Coloring(inter, live);
 		regMap = col.colors;
 		
 		fun.body = new LTLgraph();
