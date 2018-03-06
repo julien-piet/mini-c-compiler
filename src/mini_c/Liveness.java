@@ -25,6 +25,7 @@ public class Liveness {
 		        Entry<Label, ERTL> pair = it.next();
 		        
 		        LiveInfo new_item = new LiveInfo();
+		        new_item.instr = pair.getValue();
 		        new_item.defs = pair.getValue().def();
 		        new_item.succ = pair.getValue().succ();
 		        new_item.uses = pair.getValue().use();
