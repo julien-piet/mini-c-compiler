@@ -35,16 +35,69 @@ public class Interference {
 	    			if (!pair.getValue().defs.contains(r2)) {
 	    				if (!this.graph.containsKey(r1)) this.graph.put(r1, new Arcs());
 	        			this.graph.get(r1).intfs.add(r2);
+	        			this.graph.get(r1).prefs.remove(r2);
 	        			if (!this.graph.containsKey(r2)) this.graph.put(r2, new Arcs());
 	        			this.graph.get(r2).intfs.add(r1);
+	        			this.graph.get(r2).prefs.remove(r1);
 	    			}
 	    			else if (!r1.equals(r2)) {
 	    				if (!this.graph.containsKey(r1)) this.graph.put(r1, new Arcs());
 	        			this.graph.get(r1).intfs.add(r2);
+	        			this.graph.get(r1).prefs.remove(r2);
 	    			}
 	    		}
 	    	}
     	}
+	}
+	
+	void print() {
+	    System.out.println("interference:");
+	    for (Register r: graph.keySet()) {
+	    	Arcs a = graph.get(r);
+	    	System.out.println("  " + r + " pref=" + a.prefs + " intf=" + a.intfs);
+	    }
+	}
+	
+	Arcs remove_register(Register r) {
+		Iterator<Entry<Register, Arcs>> it = this.graph.entrySet().iterator();
+		while (it.hasNext()) {
+			Entry<Register, Arcs> pair = it.next();
+			if (pair.getKey().equals(r)) continue;
+			// Remove vertices going towards the removed register
+			pair.getValue().intfs.remove(r);
+			pair.getValue().prefs.remove(r);
+		}
+		return this.graph.remove(r);
+	}
+	
+	Register coalesce_register(Register r1, Register r2) {
+		if (Register.allocatable.contains(r2)) {
+			Register tmp = r1;
+			r1 = r2;
+			r2 = tmp;
+		}
+		Arcs new_node = this.graph.get(r1);
+		//Coalescing vertices
+		new_node.intfs.addAll(this.graph.get(r2).intfs);
+		new_node.prefs.addAll(this.graph.get(r2).prefs);
+		
+		//Removing self-referential vertices
+		new_node.prefs.remove(r1);
+		new_node.prefs.remove(r2);
+		
+		//Redirecting opposite vertices
+		for (Register r : new_node.intfs) {
+			this.graph.get(r).intfs.add(r1);
+			this.graph.get(r).intfs.remove(r2);
+		}
+		for (Register r : new_node.prefs) {
+			this.graph.get(r).prefs.add(r1);
+			this.graph.get(r).prefs.remove(r2);
+		}
+		
+		//Removing old register
+		this.graph.remove(r2);
+		return r1;
 	}
 }
 
