@@ -9,11 +9,12 @@ public class Main {
 	static boolean type_only = false;
 	static boolean interp_rtl = false;
 	static boolean interp_ertl = false;
+	static boolean interp_ltl = false;
 	static boolean debug = true;
 	static String file = null;
 	
 	static void usage() {
-		System.err.println("mini-c [--parse-only] [--type-only] [--interp-rtl] [--interp-ertl] file.c");
+		System.err.println("mini-c [--parse-only] [--type-only] [--interp-rtl] [--interp-ertl] [--interp-ltl] file.c");
 		System.exit(1);
 	}
 	
@@ -27,6 +28,8 @@ public class Main {
 		        interp_rtl = true;
 		    else if (arg.equals("--interp-ertl"))
 		    	interp_ertl = true;
+		    else if (arg.equals("--interp-ltl"))
+		    	interp_ltl = true;
 			else if (arg.equals("--debug"))
 				debug = true;
 			else {
@@ -69,6 +72,10 @@ public class Main {
                 live.print(f.entry);
         	}
         }
+        
+        LTLfile ltl = (new ToLTL()).translate(ertl);
+        if (debug) ltl.print();
+        if (interp_ltl) { new LTLinterp(ltl); System.exit(0); }
 	}
 	
 	static void cat(InputStream st) throws IOException {
