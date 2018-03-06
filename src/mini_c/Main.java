@@ -9,7 +9,7 @@ public class Main {
 	static boolean type_only = false;
 	static boolean interp_rtl = false;
 	static boolean interp_ertl = false;
-	static boolean debug = false;
+	static boolean debug = true;
 	static String file = null;
 	
 	static void usage() {
@@ -46,11 +46,11 @@ public class Main {
         java.io.Reader reader = new java.io.FileReader(file);
         Lexer lexer = new Lexer(reader);
         MyParser parser = new MyParser(lexer);
-    	Pfile f = (Pfile) parser.parse().value;
+    	Pfile pf = (Pfile) parser.parse().value;
         if (parse_only) System.exit(0);
         
         Typing typer = new Typing();
-        typer.visit(f);
+        typer.visit(pf);
         File tf = typer.getFile();
         if (type_only) System.exit(0);
         
@@ -62,6 +62,13 @@ public class Main {
         ERTLfile ertl = (new ToERTL()).translate(rtl);
         //if (debug) ertl.print();
         if (interp_ertl) { new ERTLinterp(ertl); System.exit(0); }
+        
+        if (debug) {
+        	for (ERTLfun f: ertl.funs) {
+                Liveness live = new Liveness(f.body);
+                live.print(f.entry);
+        	}
+        }
 	}
 	
 	static void cat(InputStream st) throws IOException {

@@ -1,5 +1,6 @@
 package mini_c;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -9,7 +10,7 @@ import java.util.Set;
 
 public class Liveness {
 
-	  Map<Label, LiveInfo> info;
+	  Map<Label, LiveInfo> info = new HashMap<Label, LiveInfo>();
 
 	  Liveness(ERTLgraph g) { 
 		  this.init(g);
@@ -35,20 +36,18 @@ public class Liveness {
 		        new_item.ins = new HashSet<Register>();
 		        
 		        info.put(pair.getKey(), new_item);
-		        it.remove(); // avoids a ConcurrentModificationException
 		    }
 	  }
 	  
 	  private void precedence() {
 		  // Determine precedence in info
-		  
+
 		  Iterator<Entry<Label, LiveInfo>> it = this.info.entrySet().iterator();
 		    while (it.hasNext()) {
 		        Entry<Label, LiveInfo> pair = it.next();
 		        for (Label lb : pair.getValue().succ) {
 		        	this.info.get(lb).pred.add(pair.getKey());
 		        }
-		        it.remove(); // avoids a ConcurrentModificationException
 		    }
 	  }
 	  

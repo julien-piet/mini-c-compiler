@@ -135,7 +135,6 @@ public class ToERTL extends EmptyRTLVisitor {
 	        Map.Entry<Label, RTL> pair = it.next();
 	        pair.getValue().accept(this);
 	        fun.body.graph.put(pair.getKey(), instr);
-	        it.remove(); // avoids a ConcurrentModificationException
 	    }
 		
 		//Fetching parameters
