@@ -13,7 +13,7 @@ public class LiveInfo {
 	
 	public String toString() {
 		
-		String rtn = "d={";
+		String rtn = instr.toString() + "  --> d={";
 		for (Register reg : this.defs) {
 			if (rtn.charAt(rtn.length()-1) != '{') rtn += ", ";
 			rtn += reg.name;

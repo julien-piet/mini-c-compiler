@@ -9,11 +9,12 @@ public class Main {
 	static boolean type_only = false;
 	static boolean interp_rtl = false;
 	static boolean interp_ertl = false;
-	static boolean debug = false;
+	static boolean interp_ltl = false;
+	static boolean debug = true;
 	static String file = null;
 	
 	static void usage() {
-		System.err.println("mini-c [--parse-only] [--type-only] [--interp-rtl] [--interp-ertl] file.c");
+		System.err.println("mini-c [--parse-only] [--type-only] [--interp-rtl] [--interp-ertl] [--interp-ltl] file.c");
 		System.exit(1);
 	}
 	
@@ -27,6 +28,8 @@ public class Main {
 		        interp_rtl = true;
 		    else if (arg.equals("--interp-ertl"))
 		    	interp_ertl = true;
+		    else if (arg.equals("--interp-ltl"))
+		    	interp_ltl = true;
 			else if (arg.equals("--debug"))
 				debug = true;
 			else {
@@ -46,11 +49,11 @@ public class Main {
         java.io.Reader reader = new java.io.FileReader(file);
         Lexer lexer = new Lexer(reader);
         MyParser parser = new MyParser(lexer);
-    	Pfile f = (Pfile) parser.parse().value;
+    	Pfile pf = (Pfile) parser.parse().value;
         if (parse_only) System.exit(0);
         
         Typing typer = new Typing();
-        typer.visit(f);
+        typer.visit(pf);
         File tf = typer.getFile();
         if (type_only) System.exit(0);
         
@@ -62,6 +65,17 @@ public class Main {
         ERTLfile ertl = (new ToERTL()).translate(rtl);
         //if (debug) ertl.print();
         if (interp_ertl) { new ERTLinterp(ertl); System.exit(0); }
+        
+        /*if (debug) {
+        	for (ERTLfun f: ertl.funs) {
+                Liveness live = new Liveness(f.body);
+                live.print(f.entry);
+        	}
+        }*/
+        
+        LTLfile ltl = (new ToLTL()).translate(ertl);
+        if (debug) ltl.print();
+        if (interp_ltl) { new LTLinterp(ltl); System.exit(0); }
 	}
 	
 	static void cat(InputStream st) throws IOException {

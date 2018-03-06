@@ -323,7 +323,7 @@ interface ERTLVisitor {
   public void visit(ERTLfile o);
   }
 
-class EmptyERTLERTLVisitor implements ERTLVisitor {
+class EmptyERTLVisitor implements ERTLVisitor {
   public void visit(ERconst o) {}
   public void visit(ERload o) {}
   public void visit(ERstore o) {}
