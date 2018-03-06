@@ -55,18 +55,19 @@ public class Main {
         if (type_only) System.exit(0);
         
         RTLfile rtl = (new ToRTL()).translate(tf);
-        if (debug) rtl.print();
+        //if (debug) rtl.print();
         if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
         
 
         ERTLfile ertl = (new ToERTL()).translate(rtl);
+        //if (debug) ertl.print();
         if (interp_ertl) { new ERTLinterp(ertl); System.exit(0); }
 	}
 	
 	static void cat(InputStream st) throws IOException {
-	  while (st.available() > 0) {
-      System.out.print((char)st.read());
-    }
+		while (st.available() > 0) {
+			System.out.print((char)st.read());
+		}
 	}
 	
 }

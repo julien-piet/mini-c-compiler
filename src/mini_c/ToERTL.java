@@ -45,9 +45,9 @@ public class ToERTL extends EmptyRTLVisitor {
 			instr = new ERmbinop(o.m, o.r1, o.r2, o.l);
 			return;
 		}
-		Label intermediate = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.rax, o.r1, o.l));
-		intermediate = fun.body.add(new ERmbinop(Mbinop.Mdiv, o.r2, Register.rax, intermediate));
-		instr = new ERmbinop(Mbinop.Mmov, o.r1, Register.rax, intermediate);
+		Label intermediate = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.rax, o.r2, o.l));
+		intermediate = fun.body.add(new ERmbinop(Mbinop.Mdiv, o.r1, Register.rax, intermediate));
+		instr = new ERmbinop(Mbinop.Mmov, o.r2, Register.rax, intermediate);
 	}
 	
 	public void visit(Rmubranch o) {
@@ -71,22 +71,30 @@ public class ToERTL extends EmptyRTLVisitor {
 		}
 		
 		//Copy rax into result register
-		inter = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.rax, o.r, inter));
+		inter = fun.body.add(new ERmbinop(Mbinop.Mmov, Register.result, o.r, inter));
 		
 		//Execute call
-		if(nbOfArguments > 0) inter = fun.body.add(new ERcall(o.s, nbOfArguments, inter));
-		else instr = new ERcall(o.s, nbOfArguments, inter);
+		instr = new ERcall(o.s, nbOfArguments, inter);
 		
-		//Copy excess parameters into caller-saved register
-		ListIterator<Register> it = o.rl.listIterator(nbOfArguments);
-		int index = nbOfArguments;
-		while(index-- > 6) inter = fun.body.add(new ERpush_param(it.previous(), inter));
+		// Push arguments
+		int argIndex;
+		ListIterator<Register> argIt = o.rl.listIterator(nbOfArguments);
+
+		// Stack parameters
+		for(argIndex = nbOfArguments; argIndex > Register.parameters.size(); argIndex--) {
+			Register arg = argIt.previous();
+			inter = fun.body.add(instr);
+			instr = new ERpush_param(arg, inter);
+		}
 		
-		//Copy first parameters into caller-saved registers
-		ListIterator<Register> caller = Register.caller_save.listIterator(index);
-		while(index-- > 1) inter = fun.body.add(new ERmbinop(Mbinop.Mmov, it.previous(), caller.previous(), inter));
-		if(index == 1) instr = new ERmbinop(Mbinop.Mmov, it.previous(), caller.previous(), inter);
-		
+		// Register parameters
+		ListIterator<Register> regParamsIt = Register.parameters.listIterator(argIndex);
+		for(; argIndex > 0; argIndex--) {
+			Register arg = argIt.previous();
+			Register regParam = regParamsIt.previous();
+			inter = fun.body.add(instr);
+			instr = new ERmbinop(Mbinop.Mmov, arg, regParam, inter);
+		}
 	}
 	
 	public void visit(Rgoto o) {
@@ -94,7 +102,6 @@ public class ToERTL extends EmptyRTLVisitor {
 	}
 	
 	public void visit(RTLfun o) {
-		
 		//Set up function
 		int nbOfFormals = o.formals.size();
 		fun = new ERTLfun(o.name, nbOfFormals);
@@ -115,12 +122,11 @@ public class ToERTL extends EmptyRTLVisitor {
 		for(Register r : Register.callee_saved) {
 			Register rr = new Register();
 			callee_saved.put(r, rr);
-			fun.locals.add(rr);
 			next_label = fun.body.add(new ERmbinop(Mbinop.Mmov, rr, r, next_label));
 		}
 		
 		//Moving result to %rax
-		fun.body.graph.put(o.exit, new ERmbinop(Mbinop.Mmov, o.result, Register.rax, next_label));
+		fun.body.graph.put(o.exit, new ERmbinop(Mbinop.Mmov, o.result, Register.result, next_label));
 		next_label = o.exit;
 		
 		//Translating function into ERTL
@@ -135,7 +141,7 @@ public class ToERTL extends EmptyRTLVisitor {
 		//Fetching parameters
 		next_label = o.entry;
 		Iterator<Register> parameter = o.formals.iterator();
-		for(Register r : Register.caller_save) {
+		for(Register r : Register.parameters) {
 			if(parameter.hasNext()) {
 				next_label = fun.body.add(new ERmbinop(Mbinop.Mmov, r, parameter.next(), next_label));
 			}
@@ -151,13 +157,12 @@ public class ToERTL extends EmptyRTLVisitor {
 		
 		//Saving callee-saved registers
 		for(Register r : Register.callee_saved) {
-			next_label = fun.body.add(new ERmbinop(Mbinop.Mmov, callee_saved.get(r), r, next_label));
+			next_label = fun.body.add(new ERmbinop(Mbinop.Mmov, r, callee_saved.get(r), next_label));
 		}
 		
-		//Allocation actiavtion table
+		//Allocation activation table
 		next_label = fun.body.add(new ERalloc_frame(next_label));
 		fun.entry = next_label;
-		
 	}
 	
 	public void visit(RTLfile o) {
