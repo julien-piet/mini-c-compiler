@@ -66,12 +66,12 @@ public class Main {
         //if (debug) ertl.print();
         if (interp_ertl) { new ERTLinterp(ertl); System.exit(0); }
         
-        if (debug) {
+        /*if (debug) {
         	for (ERTLfun f: ertl.funs) {
                 Liveness live = new Liveness(f.body);
                 live.print(f.entry);
         	}
-        }
+        }*/
         
         LTLfile ltl = (new ToLTL()).translate(ertl);
         if (debug) ltl.print();
