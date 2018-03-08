@@ -49,7 +49,7 @@ public class Main {
         java.io.Reader reader = new java.io.FileReader(file);
         Lexer lexer = new Lexer(reader);
         MyParser parser = new MyParser(lexer);
-    	Pfile pf = (Pfile) parser.parse().value;
+        Pfile pf = (Pfile) parser.parse().value;
         if (parse_only) System.exit(0);
         
         Typing typer = new Typing();

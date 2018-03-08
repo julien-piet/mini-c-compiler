@@ -97,4 +97,10 @@ public class Liveness {
 		  print(new HashSet<Label>(), entry);
 	  }
 	  
+	  public void print() {
+		  for (Label lb : this.info.keySet()) {
+			  print(new HashSet<Label>(), lb);
+		  }
+	  }
+	  
 	}

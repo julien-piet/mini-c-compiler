@@ -26,7 +26,7 @@ class Coloring {
 		Iterator<Entry<Register, Arcs>> it = ig.graph.entrySet().iterator();
 		while (it.hasNext()) {
 			Entry<Register, Arcs> pair = it.next();
-			if (pair.getValue().prefs.isEmpty() && pair.getValue().intfs.size() < min_degree) {
+			if (!Register.allocatable.contains(pair.getKey()) && pair.getValue().prefs.isEmpty() && pair.getValue().intfs.size() < min_degree) {
 				selected = pair.getKey();
 				min_degree = pair.getValue().intfs.size();
 			}
@@ -41,6 +41,7 @@ class Coloring {
 		while (it.hasNext()) {
 			Entry<Register, Arcs> pair = it.next();
 			// Double vérification, non optimal
+			if(Register.allocatable.contains(pair.getKey())) continue;
 			for (Register r : pair.getValue().prefs) {
 				if (satisfiesGeorge(ig, pair.getKey(), r)) {
 					// Fusion des registres
@@ -50,7 +51,8 @@ class Coloring {
 					this.simplify(ig);
 
 					//Assignation de la même couleur
-					colors.put(r2, colors.get(r1));
+					if (Register.allocatable.contains(r1)) colors.put(r2, new Reg(r1));
+					else 	colors.put(r2, colors.get(r1));
 					return;
 				}
 			}
@@ -59,8 +61,6 @@ class Coloring {
 	}
 
 	private boolean satisfiesGeorge(Interference ig, Register r1, Register r2) {
-		// We'll add the condition that there isn't any coalescing if both are physical registers
-		if (Register.allocatable.contains(r2) && Register.allocatable.contains(r1)) return false;
 		if (Register.allocatable.contains(r2)) {
 			// r2 est un registre physique
 			for (Register r3 : ig.graph.get(r1).intfs) {
@@ -86,14 +86,17 @@ class Coloring {
 		Iterator<Entry<Register, Arcs>> it = ig.graph.entrySet().iterator();
 		while (it.hasNext()) {
 			Entry<Register, Arcs> pair = it.next();
+			if (Register.allocatable.contains(pair.getKey())) continue;
 			if (pair.getValue().intfs.size() < min_degree) {
 				selected = pair.getKey();
 				min_degree = pair.getValue().intfs.size();
 			}
 		}
-
+		
 		if(selected != null) {
-			for (Register r : ig.graph.get(selected).prefs) ig.graph.get(r).prefs.remove(selected);
+			for (Register r : ig.graph.get(selected).prefs) {
+				ig.graph.get(r).prefs.remove(selected);
+			}
 			ig.graph.get(selected).prefs = new HashSet<Register>();
 			simplify(ig);
 		}
@@ -101,10 +104,11 @@ class Coloring {
 	}
 
 	private void spill(Interference ig) {
-		if (ig.graph.isEmpty()) return;
+		if (ig.onlyPhysical()) return;
 		double min_cost = -1;
 		Register candidate = null;
 		for (Register r : ig.graph.keySet()) {
+			if (Register.allocatable.contains(r)) continue;
 			double new_cost = cost(ig, r);
 			if (min_cost == -1 || new_cost < min_cost) {
 				min_cost = new_cost;
@@ -128,6 +132,10 @@ class Coloring {
 	private void select(Interference ig, Register r) {
 		Arcs removed_node = ig.remove_register(r);
 		simplify(ig);
+		if (Register.allocatable.contains(r)) {
+			this.colors.put(r, new Reg(r));
+			return;
+		}
 		LinkedList<Register> possibilities = new LinkedList<Register>(Register.allocatable);
 		for (Register rn : removed_node.intfs) {
 			if (colors.get(rn) instanceof Reg) possibilities.remove(((Reg)colors.get(rn)).r);

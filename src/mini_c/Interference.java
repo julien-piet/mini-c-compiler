@@ -48,15 +48,35 @@ public class Interference {
 	    			}
 	    		}
 	    	}
+	    	
+	    	for(Register r1 : this.graph.keySet()) {
+	    		for(Register r2 : this.graph.get(r1).prefs) {
+	    			if (this.graph.get(r1).intfs.contains(r2)) System.err.println("PB");
+	    		}
+	    	}
     	}
 	}
 	
+	boolean onlyPhysical() {
+		for (Register r : this.graph.keySet()) { if (!Register.allocatable.contains(r)) return false; }
+		return true;
+	}
+	
 	void print() {
-	    System.out.println("interference:");
+	    System.err.println("interference:");
 	    for (Register r: graph.keySet()) {
-	    	Arcs a = graph.get(r);
-	    	System.out.println("  " + r + " pref=" + a.prefs + " intf=" + a.intfs);
+	    		Arcs a = graph.get(r);
+	    		System.err.println("  " + r + " pref=" + a.prefs + " intf=" + a.intfs);
 	    }
+	}
+	
+	public String toString() {
+	    String rtn = "interference:\n";
+	    for (Register r: graph.keySet()) {
+	    		Arcs a = graph.get(r);
+	    		rtn += "  " + r.toString() + " pref=" + a.prefs.toString() + " intf=" + a.intfs.toString() + "\n";
+	    }
+	    return rtn;
 	}
 	
 	Arcs remove_register(Register r) {
@@ -77,6 +97,12 @@ public class Interference {
 			r1 = r2;
 			r2 = tmp;
 		}
+		//Removing old links
+		for (Register r : this.graph.get(r2).intfs) this.graph.get(r).intfs.remove(r2);
+		for (Register r : this.graph.get(r2).prefs) this.graph.get(r).prefs.remove(r2);
+		for (Register r : this.graph.get(r1).intfs) this.graph.get(r).intfs.remove(r1);
+		for (Register r : this.graph.get(r1).prefs) this.graph.get(r).prefs.remove(r1);
+		
 		Arcs new_node = this.graph.get(r1);
 		//Coalescing vertices
 		new_node.intfs.addAll(this.graph.get(r2).intfs);
@@ -86,15 +112,12 @@ public class Interference {
 		new_node.prefs.remove(r1);
 		new_node.prefs.remove(r2);
 		
-		//Redirecting opposite vertices
-		for (Register r : new_node.intfs) {
-			this.graph.get(r).intfs.add(r1);
-			this.graph.get(r).intfs.remove(r2);
-		}
-		for (Register r : new_node.prefs) {
-			this.graph.get(r).prefs.add(r1);
-			this.graph.get(r).prefs.remove(r2);
-		}
+		//removing preference arcs that interfere
+		new_node.prefs.removeAll(new_node.intfs);
+		
+		//Adding new links
+		for (Register r : new_node.prefs) this.graph.get(r).prefs.add(r1);
+		for (Register r : new_node.intfs) this.graph.get(r).intfs.add(r1);
 		
 		//Removing old register
 		this.graph.remove(r2);
