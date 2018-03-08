@@ -20,6 +20,7 @@ public class ToLTL implements ERTLVisitor {
 	
 	Coloring col;
 	Operand toOp(Register r) {
+		if (Register.allocatable.contains(r)) return new Reg(r);
 		return col.colors.get(r);
 	}
 	
