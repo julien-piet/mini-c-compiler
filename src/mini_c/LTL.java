@@ -43,6 +43,11 @@ class Reg extends Operand {
     if (that instanceof Spilled) return false;
     return ((Reg)that).r.equals(this.r);
   }
+  
+  static final Reg rbp = new Reg(Register.rbp);
+  static final Reg rsp = new Reg(Register.rsp);
+  static final Reg tmp1 = new Reg(Register.tmp1);
+  static final Reg tmp2 = new Reg(Register.tmp2);
 }
 
 /** instruction LTL */

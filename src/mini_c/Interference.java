@@ -1,5 +1,6 @@
 package mini_c;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -7,7 +8,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 public class Interference {
-	Map<Register, Arcs> graph;
+	Map<Register, Arcs> graph = new HashMap<Register, Arcs>();
 
 	Interference(Liveness lg) {
 		// First iteration to set preference vertices

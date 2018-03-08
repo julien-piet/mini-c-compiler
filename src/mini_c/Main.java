@@ -76,6 +76,11 @@ public class Main {
         LTLfile ltl = (new ToLTL()).translate(ertl);
         if (debug) ltl.print();
         if (interp_ltl) { new LTLinterp(ltl); System.exit(0); }
+        
+        Lin lin = new Lin(ltl);
+        if (debug) lin.print();
+        
+        //lin.output();
 	}
 	
 	static void cat(InputStream st) throws IOException {

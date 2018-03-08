@@ -23,7 +23,7 @@ public class X86_64 {
 	X86_64() {
 		this.text = new LinkedList<>();
 		this.data = new StringBuffer();
-    this.needed = new HashSet<>();
+		this.needed = new HashSet<>();
 	}
 	
 	/** ajoute une nouvelle instruction à la fin du code */
@@ -34,30 +34,33 @@ public class X86_64 {
 	
 	/** ajoute une étiquette qui doit rester dans le code
 	 *   (par ex. l'étiquette d'une fonction) */
-  X86_64 label(String s) {
-    this.text.add(new Lab(s));
-    this.needed.add(s);
-    return this;
-  }
-  /** ajoute une étiquette ; elle ne restera dans le code qui si
-   *  on appelle needLabel sur cette étiquette */
-  X86_64 label(Label l) {
-    this.text.add(new Lab(l.name));
-    return this;
-  }
-  /** déclare que cette étiquette devra rester dans le code */
-  void needLabel(Label l) {
-    needed.add(l.name);
-  }
+	X86_64 label(String s) {
+	    this.text.add(new Lab(s));
+	    this.needed.add(s);
+	    return this;
+	}
+	  
+	/** ajoute une étiquette ; elle ne restera dans le code qui si
+	 *  on appelle needLabel sur cette étiquette */
+	X86_64 label(Label l) {
+	    this.text.add(new Lab(l.name));
+	    return this;
+	}
+	  
+	/** déclare que cette étiquette devra rester dans le code */
+	void needLabel(Label l) {
+	    needed.add(l.name);
+	}
 
-  X86_64 movq(String op1, String op2) { return emit("movq " + op1 + ", " + op2); }
+  	X86_64 movq(String op1, String op2) { return emit("movq " + op1 + ", " + op2); }
 	X86_64 movq(int n, String op) { return movq("$" + n, op); }
-  X86_64 movzbq(String op1, String op2) { return emit("movzbq " + op1 + ", " + op2); }
+	X86_64 movzbq(String op1, String op2) { return emit("movzbq " + op1 + ", " + op2); }
 
 	X86_64 incq(String op) { return emit("incq " + op); }
 	X86_64 decq(String op) { return emit("decq " + op); }
 	X86_64 negq(String op) { return emit("negq " + op); }
 	X86_64 addq(String op1, String op2) { return emit("addq " + op1 + ", " + op2); }
+	X86_64 addq(int op1, String op2) { return addq("$"+op1, op2); }
 	X86_64 subq(String op1, String op2) { return emit("subq " + op1 + ", " + op2); }
 	X86_64 imulq(String op1, String op2) { return emit("imulq " + op1 + ", " + op2); }
 	X86_64 idivq(String op) { return emit("idivq " + op); }
@@ -169,6 +172,20 @@ public class X86_64 {
 		} catch (IOException e) {
 			throw new Error("cannot write to " + file);
 		}
+	}
+	
+	void print() {
+		System.out.println("\t.text");
+		for (LabelAsm lasm: this.text) {
+		  if (lasm instanceof Lab) {
+		    if (this.needed.contains(lasm.s))
+		    	System.out.println(lasm.s + ":");
+		  } else {
+			  System.out.print(lasm.s);
+		  }
+		}
+		System.out.println("\t.data");
+		System.out.print(this.data.toString());
 	}
 
 }
