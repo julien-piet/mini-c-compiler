@@ -51,7 +51,7 @@ public class Interference {
 	    	
 	    	for(Register r1 : this.graph.keySet()) {
 	    		for(Register r2 : this.graph.get(r1).prefs) {
-	    			if (this.graph.get(r1).intfs.contains(r2)) System.err.println("PB");
+	    			if (this.graph.get(r1).intfs.contains(r2)) System.out.println("PB");
 	    		}
 	    	}
     	}
@@ -63,10 +63,10 @@ public class Interference {
 	}
 	
 	void print() {
-	    System.err.println("interference:");
+	    System.out.println("interference:");
 	    for (Register r: graph.keySet()) {
 	    		Arcs a = graph.get(r);
-	    		System.err.println("  " + r + " pref=" + a.prefs + " intf=" + a.intfs);
+	    		System.out.println("  " + r + " pref=" + a.prefs + " intf=" + a.intfs);
 	    }
 	}
 	
