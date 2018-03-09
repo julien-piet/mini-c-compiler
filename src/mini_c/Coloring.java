@@ -11,7 +11,6 @@ class Coloring {
 	Map<Register, Operand> colors = new HashMap<>();
 	int nlocals = 0; // nombre d'emplacements sur la pile
 	int K;
-	int current_spilled_index = 0; // FIXME: Has to represent the position of the first spilled item, if any. Multiple of 8
 	Liveness uses;
 
 	Coloring(Interference ig, Liveness uses){
@@ -132,18 +131,15 @@ class Coloring {
 	private void select(Interference ig, Register r) {
 		Arcs removed_node = ig.remove_register(r);
 		simplify(ig);
-		if (Register.allocatable.contains(r)) {
-			this.colors.put(r, new Reg(r));
-			return;
-		}
 		LinkedList<Register> possibilities = new LinkedList<Register>(Register.allocatable);
 		for (Register rn : removed_node.intfs) {
 			if (colors.get(rn) instanceof Reg) possibilities.remove(((Reg)colors.get(rn)).r);
+			else if (Register.allocatable.contains(rn)) possibilities.remove(rn);
 		}
 		if (!possibilities.isEmpty()) this.colors.put(r, new Reg(possibilities.pop()));
 		else {
-			this.colors.put(r, new Spilled(this.current_spilled_index));
-			this.current_spilled_index += 8;
+			this.colors.put(r, new Spilled(this.nlocals * 8));
+			this.nlocals++;
 		}
 	}
 

@@ -1,0 +1,94 @@
+== LTL ==========================
+putchar()
+  entry  : L28
+  L28: push %rbp --> L48
+  L48: Mmov %rsp %rbp --> L27
+  L27: goto L26
+  L26: goto L25
+  L25: goto L1
+   L1: goto L24
+  L24: goto L23
+  L23: goto L22
+  L22: pop %rbp --> L21
+  L21: return
+== LTL ==========================
+sbrk()
+  entry  : L36
+  L36: push %rbp --> L49
+  L49: Mmov %rsp %rbp --> L35
+  L35: goto L34
+  L34: goto L33
+  L33: goto L2
+   L2: goto L32
+  L32: goto L31
+  L31: goto L30
+  L30: pop %rbp --> L29
+  L29: return
+== LTL ==========================
+main()
+  entry  : L47
+  L47: push %rbp --> L50
+  L50: Mmov %rsp %rbp --> L46
+  L46: goto L45
+  L45: Mmov %rbx 0(%rbp) --> L20
+  L20: mov $10 %rbx --> L19
+  L19: goto L18
+  L18: goto L9
+   L9: Mmov %rbx %rax --> L8
+   L8: jnz %rax --> L17, L7
+  L17: goto L16
+  L16: mov $1 %rax --> L15
+  L15: Msub %rax %rbx --> L14
+  L14: goto L13
+  L13: mov $65 %rdi --> L12
+  L12: Mmov %rbx %rax --> L11
+  L11: Madd %rax %rdi --> L10
+  L10: goto L44
+  L44: call putchar --> L43
+  L43: goto L9
+   L7: mov $10 %rdi --> L6
+   L6: goto L42
+  L42: call putchar --> L41
+  L41: goto L5
+   L5: mov $0 %rax --> L4
+   L4: goto L3
+   L3: goto L40
+  L40: goto L39
+  L39: Mmov 0(%rbp) %rbx --> L38
+  L38: pop %rbp --> L37
+  L37: return
+	.text
+	.globl main
+putchar:
+	pushq %rbp
+	movq %rsp, %rbp
+	popq %rbp
+	ret
+sbrk:
+	pushq %rbp
+	movq %rsp, %rbp
+	popq %rbp
+	ret
+main:
+	pushq %rbp
+	movq %rsp, %rbp
+	movq %rbx, 0(%rbp)
+	movq $10, %rbx
+L9:
+	movq %rbx, %rax
+	testq $0, %rax
+	jnz L17
+	movq $10, %rdi
+	call putchar
+	movq $0, %rax
+	movq 0(%rbp), %rbx
+	popq %rbp
+	ret
+	movq $1, %rax
+	subq %rax, %rbx
+	movq $65, %rdi
+	movq %rbx, %rax
+	addq %rax, %rdi
+	call putchar
+	jmp L9
+	.data
