@@ -65,9 +65,8 @@ public class ToERTL extends EmptyRTLVisitor {
 		Label inter = o.l;
 		// Remove the excess stack space
 		if(nbOfArguments > 6) {
-			Register offset = new Register();
-			inter = fun.body.add(new ERmbinop(Mbinop.Madd, offset, Register.rsp, inter));
-			inter = fun.body.add(new ERconst(8*(nbOfArguments - 6), offset, inter));
+			int pushedSpace = (nbOfArguments - Register.parameters.size()) * 8;
+			inter = fun.body.add(new ERmunop(new Maddi(pushedSpace), Register.rsp, inter));
 		}
 		
 		//Copy rax into result register
@@ -147,7 +146,7 @@ public class ToERTL extends EmptyRTLVisitor {
 			else break;
 		}
 		if(parameter.hasNext()) {
-			int location = nbOfFormals - 5;
+			int location = nbOfFormals - Register.parameters.size() - 1;
 			while(parameter.hasNext()) {
 				next_label = fun.body.add(new ERget_param(8*(location), parameter.next(), next_label));
 				location--;

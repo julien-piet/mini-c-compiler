@@ -143,8 +143,8 @@ public class ToLTL implements ERTLVisitor {
 	@Override
 	public void visit(ERalloc_frame o) {
 		Label l = o.l;
-		if (col.nlocals > 0) {
-			l = fun.body.add(new Lmunop(new Maddi(-col.nlocals*8), Reg.rsp, o.l));
+		if (col.stack_size > 0) {
+			l = fun.body.add(new Lmunop(new Maddi(-col.stack_size), Reg.rsp, o.l));
 		}
 		instr = new Lmbinop(Mbinop.Mmov, Reg.rsp, Reg.rbp, l);
 		instr = new Lpush(Reg.rbp, fun.body.add(instr));
@@ -154,8 +154,8 @@ public class ToLTL implements ERTLVisitor {
 	@Override
 	public void visit(ERdelete_frame o) {
 		instr = new Lpop(Register.rbp, o.l);
-		if (col.nlocals > 0) {
-			instr = new Lmunop(new Maddi(col.nlocals*8), Reg.rsp, fun.body.add(instr));
+		if (col.stack_size > 0) {
+			instr = new Lmunop(new Maddi(col.stack_size), Reg.rsp, fun.body.add(instr));
 		}
 	}
 
@@ -163,24 +163,21 @@ public class ToLTL implements ERTLVisitor {
 	@Override
 	public void visit(ERget_param o) {
 		Label l = o.l;
-		Operand or = toOp(o.r);
-		Register r;
+		Operand o1 = new Spilled(o.i+16), o2 = toOp(o.r);
 		
 		// If result is on stack, add the corresponding mov after the load
-		if(or instanceof Spilled) {
-			l = fun.body.add(new Lmbinop(Mbinop.Mmov, new Reg(Register.tmp1), or, l));
-			r = Register.tmp1;
-		} else {
-			r = ((Reg)or).r;
+		if(o2 instanceof Spilled) {
+			l = fun.body.add(new Lmbinop(Mbinop.Mmov, new Reg(Register.tmp1), o2, l));
+			o2 = Reg.tmp1;
 		}
-		// Then load the param from the stack (add 16 to address because of ret address, and former rbp)
-		instr = new Lload(Register.rbp, -(o.i+16), r, l);
+		
+		instr = new Lmbinop(Mbinop.Mmov, o1, o2, l);
 	}
 
 
 	@Override
 	public void visit(ERpush_param o) {
-		instr = new Lpush(new Reg(o.r), o.l);
+		instr = new Lpush(toOp(o.r), o.l);
 	}
 
 
@@ -198,6 +195,7 @@ public class ToLTL implements ERTLVisitor {
 		Liveness live = new Liveness(o.body);
 		Interference inter = new Interference(live);
 		col = new Coloring(inter, live);
+		col.print();
 		
 		fun.body = new LTLgraph();
 		Iterator<Map.Entry<Label, ERTL>> it = o.body.graph.entrySet().iterator();
