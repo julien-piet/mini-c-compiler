@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 
 class Coloring {
 	Map<Register, Operand> colors = new HashMap<>();
-	int nlocals = 0; // nombre d'emplacements sur la pile
+	int stack_size = 0;
 	int K;
 	Liveness uses;
 
@@ -25,7 +25,7 @@ class Coloring {
 		Iterator<Entry<Register, Arcs>> it = ig.graph.entrySet().iterator();
 		while (it.hasNext()) {
 			Entry<Register, Arcs> pair = it.next();
-			if (!Register.allocatable.contains(pair.getKey()) && pair.getValue().prefs.isEmpty() && pair.getValue().intfs.size() < min_degree) {
+			if (pair.getKey().isPseudo() && pair.getValue().prefs.isEmpty() && pair.getValue().intfs.size() < min_degree) {
 				selected = pair.getKey();
 				min_degree = pair.getValue().intfs.size();
 			}
@@ -40,7 +40,7 @@ class Coloring {
 		while (it.hasNext()) {
 			Entry<Register, Arcs> pair = it.next();
 			// Double vérification, non optimal
-			if(Register.allocatable.contains(pair.getKey())) continue;
+			if(pair.getKey().isHW()) continue;
 			for (Register r : pair.getValue().prefs) {
 				if (satisfiesGeorge(ig, pair.getKey(), r)) {
 					// Fusion des registres
@@ -50,7 +50,7 @@ class Coloring {
 					this.simplify(ig);
 
 					//Assignation de la même couleur
-					if (Register.allocatable.contains(r1)) colors.put(r2, new Reg(r1));
+					if (r1.isHW()) colors.put(r2, new Reg(r1));
 					else 	colors.put(r2, colors.get(r1));
 					return;
 				}
@@ -60,10 +60,10 @@ class Coloring {
 	}
 
 	private boolean satisfiesGeorge(Interference ig, Register r1, Register r2) {
-		if (Register.allocatable.contains(r2)) {
+		if (r2.isHW()) {
 			// r2 est un registre physique
 			for (Register r3 : ig.graph.get(r1).intfs) {
-				if ((!Register.allocatable.contains(r3) 
+				if ((r3.isPseudo() 
 						|| ig.graph.get(r3).intfs.size() >= this.K) 
 						&& !ig.graph.get(r2).intfs.contains(r3) ) return false;
 			}
@@ -71,7 +71,7 @@ class Coloring {
 		else {
 			// r2 n'est pas un registre physique
 			for (Register r3 : ig.graph.get(r1).intfs) {
-				if ((Register.allocatable.contains(r3) 
+				if ((r3.isHW()
 						|| ig.graph.get(r3).intfs.size() >= this.K) 
 						&& !ig.graph.get(r2).intfs.contains(r3) ) return false;
 			}
@@ -85,7 +85,7 @@ class Coloring {
 		Iterator<Entry<Register, Arcs>> it = ig.graph.entrySet().iterator();
 		while (it.hasNext()) {
 			Entry<Register, Arcs> pair = it.next();
-			if (Register.allocatable.contains(pair.getKey())) continue;
+			if (pair.getKey().isHW()) continue;
 			if (pair.getValue().intfs.size() < min_degree) {
 				selected = pair.getKey();
 				min_degree = pair.getValue().intfs.size();
@@ -103,11 +103,17 @@ class Coloring {
 	}
 
 	private void spill(Interference ig) {
-		if (ig.onlyPhysical()) return;
+		if (ig.onlyPhysical()) {
+			for (Register r : ig.graph.keySet()) {
+				colors.put(r, new Reg(r));
+			}
+			return;
+		}
+		
 		double min_cost = -1;
 		Register candidate = null;
 		for (Register r : ig.graph.keySet()) {
-			if (Register.allocatable.contains(r)) continue;
+			if (r.isHW()) continue;
 			double new_cost = cost(ig, r);
 			if (min_cost == -1 || new_cost < min_cost) {
 				min_cost = new_cost;
@@ -138,8 +144,8 @@ class Coloring {
 		}
 		if (!possibilities.isEmpty()) this.colors.put(r, new Reg(possibilities.pop()));
 		else {
-			this.colors.put(r, new Spilled(this.nlocals * 8));
-			this.nlocals++;
+			this.stack_size += 8;
+			this.colors.put(r, new Spilled(-this.stack_size));
 		}
 	}
 

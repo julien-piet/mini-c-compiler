@@ -195,7 +195,6 @@ public class ToLTL implements ERTLVisitor {
 		Liveness live = new Liveness(o.body);
 		Interference inter = new Interference(live);
 		col = new Coloring(inter, live);
-		col.print();
 		
 		fun.body = new LTLgraph();
 		Iterator<Map.Entry<Label, ERTL>> it = o.body.graph.entrySet().iterator();

@@ -58,7 +58,7 @@ public class Interference {
 	}
 	
 	boolean onlyPhysical() {
-		for (Register r : this.graph.keySet()) { if (!Register.allocatable.contains(r)) return false; }
+		for (Register r : this.graph.keySet()) { if (r.isPseudo()) return false; }
 		return true;
 	}
 	
@@ -92,7 +92,7 @@ public class Interference {
 	}
 	
 	Register coalesce_register(Register r1, Register r2) {
-		if (Register.allocatable.contains(r2)) {
+		if (r2.isHW()) {
 			Register tmp = r1;
 			r1 = r2;
 			r2 = tmp;
