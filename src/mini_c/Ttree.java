@@ -431,8 +431,6 @@ interface Visitor {
 
 	public void visit(Decl_var n);
 
-	public void visit(Expr n);
-
 	public void visit(Econst n);
 
 	public void visit(Eaccess_local n);
@@ -497,9 +495,6 @@ class EmptyVisitor implements Visitor {
 	}
 
 	public void visit(Decl_var n) {
-	}
-
-	public void visit(Expr n) {
 	}
 
 	public void visit(Econst n) {

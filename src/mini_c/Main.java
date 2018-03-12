@@ -10,7 +10,7 @@ public class Main {
 	static boolean interp_rtl = false;
 	static boolean interp_ertl = false;
 	static boolean interp_ltl = false;
-	static boolean debug = true;
+	static boolean debug = false;
 	static String file = null;
 	
 	static void usage() {
@@ -57,8 +57,10 @@ public class Main {
         File tf = typer.getFile();
         if (type_only) System.exit(0);
         
+        ConstExprOptimization.optimize(tf);
+        
         RTLfile rtl = (new ToRTL()).translate(tf);
-        //if (debug) rtl.print();
+        if (debug) rtl.print();
         if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
         
         ERTLfile ertl = (new ToERTL()).translate(rtl);
