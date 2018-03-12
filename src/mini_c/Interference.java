@@ -3,6 +3,8 @@ package mini_c;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -49,12 +51,34 @@ public class Interference {
 	    		}
 	    	}
 	    	
-	    	for(Register r1 : this.graph.keySet()) {
-	    		for(Register r2 : this.graph.get(r1).prefs) {
-	    			if (this.graph.get(r1).intfs.contains(r2)) System.out.println("PB");
-	    		}
+	    	//Special cases (setcc instructions in ERmbinop and Munop)
+	    	final List<Mbinop> specials = new LinkedList<Mbinop>();
+    		specials.add(Mbinop.Msete); specials.add(Mbinop.Msetg); specials.add(Mbinop.Msetge);
+    		specials.add(Mbinop.Msetl); specials.add(Mbinop.Msetle); specials.add(Mbinop.Msetne);
+    		
+    		final List<Register> non_reducable = new LinkedList<Register>();
+    		non_reducable.add(Register.rsi); non_reducable.add(Register.rdi);
+    		
+	    	boolean condition = pair.getValue().instr instanceof ERmbinop && specials.contains(((ERmbinop) pair.getValue().instr).m);
+	    	condition |= pair.getValue().instr instanceof ERmunop && ( (((ERmunop) pair.getValue().instr).m) instanceof Msetei || (((ERmunop) pair.getValue().instr).m) instanceof Msetnei );
+	    	
+
+	    	if (condition) {
+	    	 	for (Register r1 : pair.getValue().defs) {
+		    		for (Register r2 : non_reducable) {
+	    				if (!this.graph.containsKey(r1)) this.graph.put(r1, new Arcs());
+	        			this.graph.get(r1).intfs.add(r2);
+	        			this.graph.get(r1).prefs.remove(r2);
+	        			if (!this.graph.containsKey(r2)) this.graph.put(r2, new Arcs());
+	        			this.graph.get(r2).intfs.add(r1);
+	        			this.graph.get(r2).prefs.remove(r1);
+		    		}
+		    	}
+	    		
 	    	}
-    	}
+	    	
+	    	}
+    	
 	}
 	
 	boolean onlyPhysical() {
