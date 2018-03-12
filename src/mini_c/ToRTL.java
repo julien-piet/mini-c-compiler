@@ -10,7 +10,6 @@ public class ToRTL extends EmptyVisitor {
 	RTLfun    fun;
 	Register  rd;
 	Label     ret_label;
-	boolean   in_cond;
 	
 	public RTLfile translate(File f) {
 		f.accept(this);
@@ -31,36 +30,70 @@ public class ToRTL extends EmptyVisitor {
 		return r;
 	}
 	public Label visitExpr(Expr e, Register r, Label l) {
-        boolean in_cond_save = in_cond;
         Label ret_save = ret_label;
         Register rd_save = rd;
         
-		in_cond = false;
 		ret_label = l;
 		rd = r;
 		e.accept(this);
         Label rl = ret_label;
 
-        in_cond = in_cond_save;
         ret_label = ret_save;
         rd = rd_save;
 		return rl;
 	}
-	public Label visitCond(Expr e, Register r, Label l) {
-        boolean in_cond_save = in_cond;
-        Label ret_save = ret_label;
-        Register rd_save = rd;
-        
-		in_cond = true;
-		ret_label = l;
-		rd = r;
-		e.accept(this);
-        Label rl = ret_label;
-
-        in_cond = in_cond_save;
-        ret_label = ret_save;
-        rd = rd_save;
-		return rl;
+	public Label visitCond(Expr e, Label success, Label failure) {
+        // Optimizing condition visits
+		if (e instanceof Eunop) {
+			Eunop unopExpr = (Eunop) e;
+			if (unopExpr.u == Unop.Unot) return visitCond(unopExpr.e, failure, success);	
+		}
+		if (e instanceof Ebinop) {
+			Ebinop binopExpr = (Ebinop) e;
+			boolean isComp = binopExpr.b == Binop.Blt || binopExpr.b == Binop.Bgt || binopExpr.b == Binop.Ble || binopExpr.b == Binop.Bge;
+			boolean isConstComp = (binopExpr.e1 instanceof Econst || binopExpr.e2 instanceof Econst) && isComp;
+			
+			if(isConstComp) {
+				Register r1 = new Register();
+				boolean useMjlei = (binopExpr.e1 instanceof Econst && (binopExpr.b == Binop.Ble || binopExpr.b == Binop.Bgt ))
+						|| (binopExpr.e2 instanceof Econst &&  (binopExpr.b == Binop.Bge || binopExpr.b == Binop.Blt ));
+				boolean invert = (useMjlei && (binopExpr.b == Binop.Bgt || binopExpr.b == Binop.Blt)) 
+						|| (!useMjlei && (binopExpr.b == Binop.Bge || binopExpr.b == Binop.Ble));
+				boolean constIsFirstArgument = binopExpr.e1 instanceof Econst;
+				
+				int value = (constIsFirstArgument ? ((Econst) binopExpr.e1).i : ((Econst) binopExpr.e2).i);
+				Expr expression = (constIsFirstArgument ? binopExpr.e2 : binopExpr.e1);
+				Label fork1 = (invert? failure : success);
+				Label fork2 = (invert? success : failure);
+				Mubranch operator = (useMjlei ? new Mjlei(value) : new Mjgi(value));
+				
+				Label branch_label = new Label();
+				fun.body.graph.put(branch_label, new Rmubranch(operator, r1, fork1, fork2));
+				ret_label = visitExpr(expression, r1, branch_label);
+				return branch_label; 
+			}
+			
+			if(isComp) {
+				Register r1 = new Register();
+				Register r2 = new Register();
+				Label fork1 = (binopExpr.b == Binop.Blt || binopExpr.b == Binop.Ble ? success : failure);
+				Label fork2 = (binopExpr.b == Binop.Blt || binopExpr.b == Binop.Ble ? failure : success);
+				Mbbranch operator = (binopExpr.b == Binop.Blt || binopExpr.b == Binop.Bge ? Mbbranch.Mjl : Mbbranch.Mjle);
+				
+				Label branch_label = new Label();
+				fun.body.graph.put(branch_label, new Rmbbranch(operator, r1, r2, fork1, fork2));
+				ret_label = visitExpr(binopExpr.e1, r1, branch_label);
+				ret_label = visitExpr(binopExpr.e2, r2, ret_label);
+				return branch_label;
+			}
+		}
+		
+		// Base case
+		Register r1 = new Register();
+		Label branch_label = new Label();
+		fun.body.graph.put(branch_label, new Rmubranch(new Mjnz(), r1, success, failure));
+		ret_label = visitExpr(e, r1, branch_label);
+		return branch_label;
 	}
 	
 	LinkedList<HashMap<String, Register>> locals = new LinkedList<>();
@@ -142,6 +175,16 @@ public class ToRTL extends EmptyVisitor {
 		Mbinop op;
 		switch(n.b) {
 			case Badd:
+				if (n.e1 instanceof Econst) {
+					ret_label = fun.body.add(new Rmunop(new Maddi(((Econst) n.e1).i), rd, ret_label));
+					ret_label = visitExpr(n.e2, rd, ret_label);
+					return;
+				}
+				if (n.e2 instanceof Econst) {
+					ret_label = fun.body.add(new Rmunop(new Maddi(((Econst) n.e2).i), rd, ret_label));
+					ret_label = visitExpr(n.e1, rd, ret_label);
+					return;
+				}
 				op = Mbinop.Madd;
 				break;
 			case Bsub:
@@ -217,11 +260,7 @@ public class ToRTL extends EmptyVisitor {
 		Label ell = visitStmt(n.s2, dest);
 		Label ifl = visitStmt(n.s1, dest);
 		
-		Register condR = new Register();
-		Label choose = fun.body.add(new Rmubranch(new Mjnz(), condR, ifl, ell));
-		Label cond = visitCond(n.e, condR, choose);
-		
-		ret_label = cond;
+		visitCond(n.e, ifl, ell);
 	}
 
 	@Override
@@ -237,17 +276,29 @@ public class ToRTL extends EmptyVisitor {
         //            /\--------------- \/
         //
 
-		Register condR = new Register();
-
-		Label out = ret_label;
-		Rmubranch br = new Rmubranch(new Mjnz(), condR, null, out);
-		Label choose = fun.body.add(br);
-		Label cond = visitCond(n.e, condR, choose);
-		Label in = visitStmt(n.s, cond);
-        Label init = fun.body.add(new Rgoto(cond));
+//		OLD CODE
 		
-        br.l1 = in;
-		ret_label = init;
+//		Register condR = new Register();
+//
+//		Label out = ret_label;
+//		Rmubranch br = new Rmubranch(new Mjnz(), condR, null, out);
+//		Label choose = fun.body.add(br);
+//		Label cond = visitCond(n.e, condR, choose);
+//		Label in = visitStmt(n.s, cond);
+//      Label init = fun.body.add(new Rgoto(cond));
+//		
+//      br.l1 = in;
+//		ret_label = init;
+		
+		Label branch_label = visitCond(n.e, null, ret_label);
+		Label cond = ret_label;
+		if (fun.body.graph.get(branch_label) instanceof Rmubranch) {
+			((Rmubranch)fun.body.graph.get(branch_label)).l1 = visitStmt(n.s, ret_label);
+		}
+		else {
+			((Rmbbranch)fun.body.graph.get(branch_label)).l1 = visitStmt(n.s, ret_label);
+		}
+        ret_label = fun.body.add(new Rgoto(cond));
 	}
 
 	@Override
