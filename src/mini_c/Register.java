@@ -9,11 +9,13 @@ public class Register {
 	private static int next = 0;
 	
 	final String name;
+	final String byteName;
 	
 	/** renvoie un pseudo-registre frais */ 
 	Register() {
 		next++;
 		this.name = "#" + next;
+		this.byteName = null;
 	}
 	
 	/** s'agit-il d'un pseudo-registre ? */ 
@@ -38,18 +40,27 @@ public class Register {
 	public String toString() {
 		return this.name;
 	}
-		
-	private Register(String name) { this.name = name; }
 	
-	static final Register rax = new Register("%rax");
+	private Register(String name) {
+		this.name = name;
+		this.byteName = null;
+	}
+	private Register(String name, String byteName) {
+		this.name = name;
+		this.byteName = byteName;
+	}
+	
+	public final String byteReg() { return this.byteName; }
+	
+	static final Register rax = new Register("%rax", "%al");
 	static final Register result = rax;
 	
 	static final Register rdi = new Register("%rdi");
 	static final Register rsi = new Register("%rsi");
-	static final Register rdx = new Register("%rdx");
-	static final Register rcx = new Register("%rcx");
-	static final Register r8  = new Register("%r8");
-	static final Register r9  = new Register("%r9");
+	static final Register rdx = new Register("%rdx", "%dl");
+	static final Register rcx = new Register("%rcx", "%cl");
+	static final Register r8  = new Register("%r8", "%r8b");
+	static final Register r9  = new Register("%r9", "%r9b");
 
 	static final List<Register> parameters = new LinkedList<Register>();
 	static {
@@ -63,16 +74,15 @@ public class Register {
 		for (Register r: parameters) caller_save.add(r);
 	}
 
-	static final Register rbx = new Register("%rbx");
-	static final Register r12 = new Register("%r12");
-//	static final Register r13 = new Register("%r13");
-//	static final Register r14 = new Register("%r14");
-//	static final Register r15 = new Register("%r15");
+	static final Register rbx = new Register("%rbx", "%bl");
+	static final Register r12 = new Register("%r12", "%r12b");
+ 	static final Register r13 = new Register("%r13");
+	static final Register r14 = new Register("%r14");
 
 	static final List<Register> callee_saved = new LinkedList<Register>();
 	static {
 		callee_saved.add(rbx); callee_saved.add(r12);
-		// callee_save.add(r13); callee_save.add(r14); callee_save.add(r15);
+		callee_saved.add(r13); callee_saved.add(r14);
 	}
 
 	/** ensemble des registres participant à l'allocation de registres */
@@ -84,9 +94,7 @@ public class Register {
 	
 	static final Register rsp = new Register("%rsp");
 	static final Register rbp = new Register("%rbp");
-  static final Register tmp1 = new Register("%r15");
+	static final Register tmp1 = new Register("%r15");
 	static final Register tmp2 = new Register("%r11");
-	
-
 	
 }

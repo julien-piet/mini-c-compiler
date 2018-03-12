@@ -23,6 +23,17 @@ public class Lin implements LTLVisitor {
 	    }
 	}
 	
+	private void linJmpTarget(Label l) {
+		if (visited.contains(l)) {
+			return;
+		}
+		else {
+	    	visited.add(l);
+	    	asm.label(l.toString());
+	    	cfg.graph.get(l).accept(this);
+		}
+	}
+	
 	@Override
 	public void visit(Lload o) {
 		asm.movq(o.i + "(" + o.r1 + ")", o.r2.toString());
@@ -51,8 +62,8 @@ public class Lin implements LTLVisitor {
 			asm.cmpq(((Mjgi)o.m).n, o.r.toString());
 			asm.jg(o.l1.toString());
 		}
-		lin(o.l2);
-		lin(o.l1);
+		linJmpTarget(o.l2);
+		linJmpTarget(o.l1);
 	}
 
 	@Override
@@ -68,9 +79,9 @@ public class Lin implements LTLVisitor {
 			default:
 				break;
 		}
-		lin(o.l2);
+		linJmpTarget(o.l2);
 		asm.jmp(o.l1.toString());
-		lin(o.l1);
+		linJmpTarget(o.l1);
 	}
 
 	@Override

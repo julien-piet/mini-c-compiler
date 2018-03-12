@@ -10,7 +10,7 @@ public class Main {
 	static boolean interp_rtl = false;
 	static boolean interp_ertl = false;
 	static boolean interp_ltl = false;
-	static boolean debug = true;
+	static boolean debug = false;
 	static String file = null;
 	
 	static void usage() {
