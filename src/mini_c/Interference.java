@@ -11,6 +11,12 @@ import java.util.Map.Entry;
 
 public class Interference {
 	Map<Register, Arcs> graph = new HashMap<Register, Arcs>();
+	
+	static final List<Mbinop> binopUsingSetcc = new LinkedList<Mbinop>();
+	static {
+		binopUsingSetcc.add(Mbinop.Msete); binopUsingSetcc.add(Mbinop.Msetg); binopUsingSetcc.add(Mbinop.Msetge);
+		binopUsingSetcc.add(Mbinop.Msetl); binopUsingSetcc.add(Mbinop.Msetle); binopUsingSetcc.add(Mbinop.Msetne);
+	}
 
 	Interference(Liveness lg) {
 		// First iteration to set preference vertices
@@ -52,20 +58,22 @@ public class Interference {
 	    	}
 	    	
 	    	//Special cases (setcc instructions in ERmbinop and Munop)
-	    	final List<Mbinop> specials = new LinkedList<Mbinop>();
-    		specials.add(Mbinop.Msete); specials.add(Mbinop.Msetg); specials.add(Mbinop.Msetge);
-    		specials.add(Mbinop.Msetl); specials.add(Mbinop.Msetle); specials.add(Mbinop.Msetne);
     		
-    		final List<Register> non_reducable = new LinkedList<Register>();
-    		non_reducable.add(Register.rsi); non_reducable.add(Register.rdi);
-    		
-	    	boolean condition = pair.getValue().instr instanceof ERmbinop && specials.contains(((ERmbinop) pair.getValue().instr).m);
-	    	condition |= pair.getValue().instr instanceof ERmunop && ( (((ERmunop) pair.getValue().instr).m) instanceof Msetei || (((ERmunop) pair.getValue().instr).m) instanceof Msetnei );
-	    	
+    		boolean useSetcc = false;
+    		ERTL inst = pair.getValue().instr;
+    		if (inst instanceof ERmbinop) {
+    			Mbinop op = ((ERmbinop)inst).m;
+    			useSetcc = binopUsingSetcc.contains(op);
+    		}
+    		else if (inst instanceof ERmunop) {
+    			Munop op = ((ERmunop)inst).m;
+    			useSetcc = op instanceof Msetei || op instanceof Msetnei;
+    		}
 
-	    	if (condition) {
+
+	    	if (useSetcc) {
 	    	 	for (Register r1 : pair.getValue().defs) {
-		    		for (Register r2 : non_reducable) {
+		    		for (Register r2 : Register.hasNot8Bit) {
 	    				if (!this.graph.containsKey(r1)) this.graph.put(r1, new Arcs());
 	        			this.graph.get(r1).intfs.add(r2);
 	        			this.graph.get(r1).prefs.remove(r2);

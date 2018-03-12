@@ -10,7 +10,7 @@ public class Main {
 	static boolean interp_rtl = false;
 	static boolean interp_ertl = false;
 	static boolean interp_ltl = false;
-	static boolean debug = false;
+	static boolean debug = true;
 	static String file = null;
 	
 	static void usage() {
@@ -62,11 +62,11 @@ public class Main {
         if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
         
         ERTLfile ertl = (new ToERTL()).translate(rtl);
-        //if (debug) ertl.print();
+        if (debug) ertl.print();
         if (interp_ertl) { new ERTLinterp(ertl); System.exit(0); }
   
         LTLfile ltl = (new ToLTL()).translate(ertl);
-        //if (debug) ltl.print();
+        if (debug) ltl.print();
         if (interp_ltl) { new LTLinterp(ltl); System.exit(0); }
         
         Lin lin = new Lin(ltl);

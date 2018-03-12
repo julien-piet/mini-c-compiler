@@ -68,7 +68,7 @@ public class Register {
 		parameters.add(rcx); parameters.add(r8); parameters.add(r9);
 	}
 	
-	static final Register r10 = new Register("%r10");
+	static final Register r10 = new Register("%r10", "%r10b");
 	static final List<Register> caller_save = new LinkedList<Register>();
 	static {	caller_save.add(rax); caller_save.add(r10); 
 		for (Register r: parameters) caller_save.add(r);
@@ -76,8 +76,8 @@ public class Register {
 
 	static final Register rbx = new Register("%rbx", "%bl");
 	static final Register r12 = new Register("%r12", "%r12b");
- 	static final Register r13 = new Register("%r13");
-	static final Register r14 = new Register("%r14");
+ 	static final Register r13 = new Register("%r13", "%r13b");
+	static final Register r14 = new Register("%r14", "%r14b");
 
 	static final List<Register> callee_saved = new LinkedList<Register>();
 	static {
@@ -96,5 +96,11 @@ public class Register {
 	static final Register rbp = new Register("%rbp");
 	static final Register tmp1 = new Register("%r15");
 	static final Register tmp2 = new Register("%r11");
+	
+
+	static final List<Register> hasNot8Bit = new LinkedList<Register>();
+	static {
+		hasNot8Bit.add(Register.rsi); hasNot8Bit.add(Register.rdi);
+	}
 	
 }

@@ -37,21 +37,23 @@ public class Lin implements LTLVisitor {
 	@Override
 	public void visit(Lload o) {
 		asm.movq(o.i + "(" + o.r1 + ")", o.r2.toString());
+		lin(o.l);
 	}
 
 	@Override
 	public void visit(Lstore o) {
 		asm.movq(o.r1.toString(), o.i + "(" + o.r2 + ")");
+		lin(o.l);
 	}
 
 	@Override
 	public void visit(Lmubranch o) {
 		if (o.m instanceof Mjz) {
-			asm.testq(0, o.r.toString());
+			asm.cmpq(0, o.r.toString());
 			asm.jz(o.l1.toString());
 		}
 		else if (o.m instanceof Mjnz) {
-			asm.testq(0, o.r.toString());
+			asm.cmpq(0, o.r.toString());
 			asm.jnz(o.l1.toString());
 		}
 		else if (o.m instanceof Mjlei) {
@@ -107,13 +109,13 @@ public class Lin implements LTLVisitor {
 		}
 		else if (o.m instanceof Msetei) {
 			asm.cmpq(((Msetei)o.m).n, o.o.toString());
-			asm.setne(o.o.byteSized());
-			asm.movzbq(o.o.byteSized(), o.o.toString());
+			asm.movq(0, o.o.toString());
+			asm.sete(o.o.byteSized());
 		}
 		else if (o.m instanceof Msetnei) {
 			asm.cmpq(((Msetnei)o.m).n, o.o.toString());
+			asm.movq(0, o.o.toString());
 			asm.setne(o.o.byteSized());
-			asm.movzbq(o.o.byteSized(), o.o.toString());
 		}
 		lin(o.l);
 	}
@@ -139,33 +141,33 @@ public class Lin implements LTLVisitor {
 				break;
 			case Msete:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
+				asm.movq(0, o.o2.toString());
 				asm.sete(o.o2.byteSized());
-				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetg:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
+				asm.movq(0, o.o2.toString());
 				asm.setg(o.o2.byteSized());
-				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetge:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
+				asm.movq(0, o.o2.toString());
 				asm.setge(o.o2.byteSized());
-				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetl:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
+				asm.movq(0, o.o2.toString());
 				asm.setl(o.o2.byteSized());
-				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetle:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
+				asm.movq(0, o.o2.toString());
 				asm.setle(o.o2.byteSized());
-				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetne:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
+				asm.movq(0, o.o2.toString());
 				asm.setne(o.o2.byteSized());
-				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			default:
 				break;
