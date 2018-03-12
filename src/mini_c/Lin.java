@@ -107,11 +107,13 @@ public class Lin implements LTLVisitor {
 		}
 		else if (o.m instanceof Msetei) {
 			asm.cmpq(((Msetei)o.m).n, o.o.toString());
-			asm.sete(o.o.toString());
+			asm.setne(o.o.byteSized());
+			asm.movzbq(o.o.byteSized(), o.o.toString());
 		}
 		else if (o.m instanceof Msetnei) {
-			asm.cmpq(((Msetei)o.m).n, o.o.toString());
-			asm.setne(o.o.toString());
+			asm.cmpq(((Msetnei)o.m).n, o.o.toString());
+			asm.setne(o.o.byteSized());
+			asm.movzbq(o.o.byteSized(), o.o.toString());
 		}
 		lin(o.l);
 	}
@@ -132,31 +134,38 @@ public class Lin implements LTLVisitor {
 				asm.imulq(o.o1.toString(), o.o2.toString());
 				break;
 			case Mdiv:
+				asm.cqto();
 				asm.idivq(o.o1.toString());
 				break;
 			case Msete:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
-				asm.sete(o.o2.toString());
+				asm.sete(o.o2.byteSized());
+				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetg:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
-				asm.setg(o.o2.toString());
+				asm.setg(o.o2.byteSized());
+				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetge:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
-				asm.setge(o.o2.toString());
+				asm.setge(o.o2.byteSized());
+				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetl:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
-				asm.setl(o.o2.toString());
+				asm.setl(o.o2.byteSized());
+				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetle:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
-				asm.setle(o.o2.toString());
+				asm.setle(o.o2.byteSized());
+				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			case Msetne:
 				asm.cmpq(o.o1.toString(), o.o2.toString());
-				asm.setne(o.o2.toString());
+				asm.setne(o.o2.byteSized());
+				asm.movzbq(o.o2.byteSized(), o.o2.toString());
 				break;
 			default:
 				break;

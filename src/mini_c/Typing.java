@@ -62,19 +62,17 @@ public class Typing implements Pvisitor {
 	@Override
 	public void visit(Pfile n) {
         file = new File(new LinkedList<Decl_fun>());
-        Sblock empty_block = new Sblock(new LinkedList<Decl_var>(), new LinkedList<Stmt>());
-        
         
         // Define putchar
         LinkedList<Decl_var> putcharArgs = new LinkedList<>();
         putcharArgs.add(new Decl_var(new Tint(), "c"));
-        Decl_fun putchar = new Decl_fun(new Tint(), "putchar", putcharArgs, empty_block);
+        Decl_fun putchar = new Decl_fun(new Tint(), "putchar", putcharArgs, null);
         file.funs.add(putchar);
 
         // Define sbrk
         LinkedList<Decl_var> sbrkArgs = new LinkedList<>();
         sbrkArgs.add(new Decl_var(new Tint(), "n"));
-        Decl_fun sbrk = new Decl_fun(new Tvoidstar(), "sbrk", sbrkArgs, empty_block);
+        Decl_fun sbrk = new Decl_fun(new Tvoidstar(), "sbrk", sbrkArgs, null);
         file.funs.add(sbrk);
         
         // Visit all definitions

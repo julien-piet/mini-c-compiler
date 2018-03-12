@@ -279,6 +279,12 @@ public class ToRTL extends EmptyVisitor {
 
 	@Override
 	public void visit(Decl_fun n) {
+		// Don't compile function declarations, only definitions
+		if (n.fun_body == null) {
+			fun = null;
+			return;
+		}
+		
 		fun = new RTLfun(n.fun_name);
 		fun.body = new RTLgraph();
 		fun.exit = new Label();
@@ -304,7 +310,10 @@ public class ToRTL extends EmptyVisitor {
 	public void visit(File n) {
 		file = new RTLfile();
 		for(Decl_fun f: n.funs) {
-			file.funs.add(this.visitFun(f));
+			RTLfun rtlf = this.visitFun(f);
+			if (rtlf != null) {
+				file.funs.add(rtlf);
+			}
 		}
 	}
 

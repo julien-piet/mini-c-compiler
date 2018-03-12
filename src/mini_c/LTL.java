@@ -11,7 +11,9 @@ import java.util.Set;
 /** une opérande = un registre ou un emplacement de pile
  *  (résultat de l'allocation de registres) */
 
-abstract class Operand {}
+abstract class Operand {
+	public abstract String byteSized();
+}
 
 /** une opérande qui est un emplacement de pile */
 class Spilled extends Operand {
@@ -21,6 +23,11 @@ class Spilled extends Operand {
   
   @Override
   public String toString() { return n + "(%rbp)"; }
+
+  @Override
+  public String byteSized() {
+	  return toString();
+  }
   
   @Override
   public boolean equals(Object that) {
@@ -37,6 +44,11 @@ class Reg extends Operand {
   
   @Override
   public String toString() { return r.toString(); }
+
+  @Override
+  public String byteSized() {
+	  return r.byteReg();
+  }
   
   @Override
   public boolean equals(Object that) {
