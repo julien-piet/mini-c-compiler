@@ -56,6 +56,10 @@ public class Lin implements LTLVisitor {
 			asm.cmpq(0, o.r.toString());
 			asm.jnz(o.l1.toString());
 		}
+		else if (o.m instanceof Mjli) {
+			asm.cmpq(((Mjli)o.m).n, o.r.toString());
+			asm.jl(o.l1.toString());
+		}
 		else if (o.m instanceof Mjlei) {
 			asm.cmpq(((Mjlei)o.m).n, o.r.toString());
 			asm.jle(o.l1.toString());
@@ -63,6 +67,18 @@ public class Lin implements LTLVisitor {
 		else if (o.m instanceof Mjgi) {
 			asm.cmpq(((Mjgi)o.m).n, o.r.toString());
 			asm.jg(o.l1.toString());
+		}
+		else if (o.m instanceof Mjgei) {
+			asm.cmpq(((Mjgei)o.m).n, o.r.toString());
+			asm.jge(o.l1.toString());
+		}
+		else if (o.m instanceof Mjei) {
+			asm.cmpq(((Mjei)o.m).n, o.r.toString());
+			asm.je(o.l1.toString());
+		}
+		else if (o.m instanceof Mjnei) {
+			asm.cmpq(((Mjnei)o.m).n, o.r.toString());
+			asm.jne(o.l1.toString());
 		}
 		linJmpTarget(o.l2);
 		linJmpTarget(o.l1);
@@ -78,7 +94,17 @@ public class Lin implements LTLVisitor {
 			case Mjle:
 				asm.jle(o.l1.toString());
 				break;
-			default:
+			case Mjg:
+				asm.jg(o.l1.toString());
+				break;
+			case Mjge:
+				asm.jge(o.l1.toString());
+				break;
+			case Mje:
+				asm.je(o.l1.toString());
+				break;
+			case Mjne:
+				asm.jne(o.l1.toString());
 				break;
 		}
 		linJmpTarget(o.l2);
@@ -168,8 +194,6 @@ public class Lin implements LTLVisitor {
 				asm.cmpq(o.o1.toString(), o.o2.toString());
 				asm.movq(0, o.o2.toString());
 				asm.setne(o.o2.byteSized());
-				break;
-			default:
 				break;
 		}
 		lin(o.l);

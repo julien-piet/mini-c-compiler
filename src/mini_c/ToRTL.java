@@ -42,58 +42,87 @@ public class ToRTL extends EmptyVisitor {
         rd = rd_save;
 		return rl;
 	}
+	
 	public Label visitCond(Expr e, Label success, Label failure) {
-        // Optimizing condition visits
 		if (e instanceof Eunop) {
 			Eunop unopExpr = (Eunop) e;
-			if (unopExpr.u == Unop.Unot) return visitCond(unopExpr.e, failure, success);	
-		}
-		if (e instanceof Ebinop) {
-			Ebinop binopExpr = (Ebinop) e;
-			boolean isComp = binopExpr.b == Binop.Blt || binopExpr.b == Binop.Bgt || binopExpr.b == Binop.Ble || binopExpr.b == Binop.Bge;
-			boolean isConstComp = (binopExpr.e1 instanceof Econst || binopExpr.e2 instanceof Econst) && isComp;
 			
-			if(isConstComp) {
-				Register r1 = new Register();
-				boolean useMjlei = (binopExpr.e1 instanceof Econst && (binopExpr.b == Binop.Ble || binopExpr.b == Binop.Bgt ))
-						|| (binopExpr.e2 instanceof Econst &&  (binopExpr.b == Binop.Bge || binopExpr.b == Binop.Blt ));
-				boolean invert = (useMjlei && (binopExpr.b == Binop.Bgt || binopExpr.b == Binop.Blt)) 
-						|| (!useMjlei && (binopExpr.b == Binop.Bge || binopExpr.b == Binop.Ble));
-				boolean constIsFirstArgument = binopExpr.e1 instanceof Econst;
-				
-				int value = (constIsFirstArgument ? ((Econst) binopExpr.e1).i : ((Econst) binopExpr.e2).i);
-				Expr expression = (constIsFirstArgument ? binopExpr.e2 : binopExpr.e1);
-				Label fork1 = (invert? failure : success);
-				Label fork2 = (invert? success : failure);
-				Mubranch operator = (useMjlei ? new Mjlei(value) : new Mjgi(value));
-				
-				Label branch_label = new Label();
-				fun.body.graph.put(branch_label, new Rmubranch(operator, r1, fork1, fork2));
-				ret_label = visitExpr(expression, r1, branch_label);
-				return branch_label; 
-			}
-			
-			if(isComp) {
-				Register r1 = new Register();
-				Register r2 = new Register();
-				Label fork1 = (binopExpr.b == Binop.Blt || binopExpr.b == Binop.Ble ? success : failure);
-				Label fork2 = (binopExpr.b == Binop.Blt || binopExpr.b == Binop.Ble ? failure : success);
-				Mbbranch operator = (binopExpr.b == Binop.Blt || binopExpr.b == Binop.Bge ? Mbbranch.Mjl : Mbbranch.Mjle);
-				
-				Label branch_label = new Label();
-				fun.body.graph.put(branch_label, new Rmbbranch(operator, r1, r2, fork1, fork2));
-				ret_label = visitExpr(binopExpr.e1, r1, branch_label);
-				ret_label = visitExpr(binopExpr.e2, r2, ret_label);
-				return branch_label;
+			if (unopExpr.u == Unop.Unot) {
+				return visitCond(unopExpr.e, failure, success);	
 			}
 		}
 		
-		// Base case
-		Register r1 = new Register();
-		Label branch_label = new Label();
-		fun.body.graph.put(branch_label, new Rmubranch(new Mjnz(), r1, success, failure));
-		ret_label = visitExpr(e, r1, branch_label);
-		return branch_label;
+		else if (e instanceof Ebinop) {
+			Ebinop be = (Ebinop) e;
+			
+			if (Binop.Compop.contains(be.b)) {
+				if (be.e1 instanceof Econst || be.e2 instanceof Econst) {
+					boolean invert = (be.e1 instanceof Econst);
+					Mubranch op = null;
+					switch(be.b) {
+					case Beq:
+						op = invert ? new Mjei(((Econst)be.e1).i) : new Mjei(((Econst)be.e2).i);
+						break;
+					case Bneq:
+						op = invert ? new Mjnei(((Econst)be.e1).i) : new Mjnei(((Econst)be.e2).i);
+						break;
+					case Bge:
+						op = invert ? new Mjli(((Econst)be.e1).i) : new Mjgei(((Econst)be.e2).i);
+						break;
+					case Bgt:
+						op = invert ? new Mjlei(((Econst)be.e1).i) : new Mjgi(((Econst)be.e2).i);
+						break;
+					case Ble:
+						op = invert ? new Mjgi(((Econst)be.e1).i) : new Mjlei(((Econst)be.e2).i);
+						break;
+					case Blt:
+						op = invert ? new Mjgei(((Econst)be.e1).i) : new Mjli(((Econst)be.e2).i);
+						break;
+					default:
+						break;
+					}
+					Register r = new Register();
+					ret_label = fun.body.add(new Rmubranch(op, r, success, failure));
+					ret_label = invert ? visitExpr(be.e2, r, ret_label) : visitExpr(be.e1, r, ret_label);
+					return ret_label;
+				}
+				else {
+					Mbbranch op = null;
+					switch(be.b) {
+					case Beq:
+						op = Mbbranch.Mje;
+						break;
+					case Bneq:
+						op = Mbbranch.Mjne;
+						break;
+					case Bge:
+						op = Mbbranch.Mjge;
+						break;
+					case Bgt:
+						op = Mbbranch.Mjg;
+						break;
+					case Ble:
+						op = Mbbranch.Mjle;
+						break;
+					case Blt:
+						op = Mbbranch.Mjl;
+						break;
+					default:
+						break;
+					}
+					Register r1 = new Register();
+					Register r2 = new Register();
+					ret_label = fun.body.add(new Rmbbranch(op, r1, r2, success, failure));
+					ret_label = visitExpr(be.e1, r2, ret_label);
+					ret_label = visitExpr(be.e2, r1, ret_label);
+					return ret_label;
+				}
+			}
+		}
+		
+		Register r = new Register();
+		Label branch_label = fun.body.add(new Rmubranch(new Mjnz(), r, success, failure));
+		return visitExpr(e, r, branch_label);
 	}
 	
 	LinkedList<HashMap<String, Register>> locals = new LinkedList<>();
@@ -260,45 +289,23 @@ public class ToRTL extends EmptyVisitor {
 		Label ell = visitStmt(n.s2, dest);
 		Label ifl = visitStmt(n.s1, dest);
 		
-		visitCond(n.e, ifl, ell);
+		ret_label = visitCond(n.e, ifl, ell);
 	}
 
 	@Override
 	public void visit(Swhile n) {
-        // out : end of the while
-        // choose : jumping to the while body or the end depending on condition
-        // cond : computation of the condition
-        // in : inside the while
-        // init : entry point, jumping to cond
-        // 
-        // --> init ----------\/
-        //            in --> cond --> choose --> out
-        //            /\--------------- \/
-        //
-
-//		OLD CODE
+        // -------------\/
+        //     in --> branch --> out
+        //     /\-------\/
 		
-//		Register condR = new Register();
-//
-//		Label out = ret_label;
-//		Rmubranch br = new Rmubranch(new Mjnz(), condR, null, out);
-//		Label choose = fun.body.add(br);
-//		Label cond = visitCond(n.e, condR, choose);
-//		Label in = visitStmt(n.s, cond);
-//      Label init = fun.body.add(new Rgoto(cond));
-//		
-//      br.l1 = in;
-//		ret_label = init;
+		Label out = ret_label;
+		Label in = new Label();
+		Label branch = visitCond(n.e, in, out);
 		
-		Label branch_label = visitCond(n.e, null, ret_label);
-		Label cond = ret_label;
-		if (fun.body.graph.get(branch_label) instanceof Rmubranch) {
-			((Rmubranch)fun.body.graph.get(branch_label)).l1 = visitStmt(n.s, ret_label);
-		}
-		else {
-			((Rmbbranch)fun.body.graph.get(branch_label)).l1 = visitStmt(n.s, ret_label);
-		}
-        ret_label = fun.body.add(new Rgoto(cond));
+		Label in2 = visitStmt(n.s, branch);
+		fun.body.graph.put(in, new Rgoto(in2));
+		
+		ret_label = branch;
 	}
 
 	@Override

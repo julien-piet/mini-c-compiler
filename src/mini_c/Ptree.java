@@ -3,8 +3,15 @@ package mini_c;
 import java.util.LinkedList;
 
 enum Binop {
-	Beq, Bneq, Blt, Ble, Bgt, Bge, Badd, Bsub, Bmul, Bdiv, Band, Bor
-}
+	Beq, Bneq, Blt, Ble, Bgt, Bge, Badd, Bsub, Bmul, Bdiv, Band, Bor;
+	
+	static LinkedList<Binop> Compop = new LinkedList<Binop>();
+	static {
+		Compop.add(Beq); Compop.add(Bneq);
+		Compop.add(Blt); Compop.add(Ble);
+		Compop.add(Bgt); Compop.add(Bge);
+	}
+};
 
 enum Unop {
 	Uneg, Unot
